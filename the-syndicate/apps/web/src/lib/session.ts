@@ -76,18 +76,21 @@ export function saveSoundEnabled(on: boolean): void {
 
 // ---- Moving a seat to another device ----------------------------------------
 
-function encode(seat: StoredSeat): string {
-  return btoa(unescape(encodeURIComponent(JSON.stringify(seat))))
+export function encodeSeat(seat: StoredSeat): string {
+  // UTF-8 bytes -> base64url (names can contain any Unicode).
+  const bytes = new TextEncoder().encode(JSON.stringify(seat));
+  return btoa(Array.from(bytes, (b) => String.fromCharCode(b)).join(''))
     .replace(/\+/g, '-')
     .replace(/\//g, '_')
     .replace(/=+$/, '');
 }
 
-function decode(text: string): StoredSeat | null {
+export function decodeSeat(text: string): StoredSeat | null {
   try {
     const b64 = text.replace(/-/g, '+').replace(/_/g, '/');
     const padded = b64 + '='.repeat((4 - (b64.length % 4)) % 4);
-    const json = decodeURIComponent(escape(atob(padded)));
+    const binary = atob(padded);
+    const json = new TextDecoder().decode(Uint8Array.from(binary, (c) => c.charCodeAt(0)));
     const seat = JSON.parse(json) as StoredSeat;
     const ok =
       typeof seat.roomCode === 'string' &&
@@ -103,7 +106,7 @@ function decode(text: string): StoredSeat | null {
 /** A private link that opens this seat elsewhere; the seat rides in the URL fragment. */
 export function transferLink(roomCode: string): string | null {
   const seat = loadSeat(roomCode);
-  return seat ? `${location.origin}/room/${seat.roomCode}#seat=${encode(seat)}` : null;
+  return seat ? `${location.origin}/room/${seat.roomCode}#seat=${encodeSeat(seat)}` : null;
 }
 
 /**
@@ -114,6 +117,6 @@ export function acceptTransferredSeat(roomCode: string): void {
   const match = /^#seat=([A-Za-z0-9_-]+)$/.exec(location.hash);
   if (!match) return;
   history.replaceState(null, '', location.pathname);
-  const seat = decode(match[1] as string);
+  const seat = decodeSeat(match[1] as string);
   if (seat && seat.roomCode.toUpperCase() === roomCode.toUpperCase()) saveSeat(seat);
 }
