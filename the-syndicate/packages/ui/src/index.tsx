@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 
 export function Card({
   children,
@@ -95,7 +96,8 @@ export function ConfirmDialog({
     };
   }, [open, onCancel]);
   if (!open) return null;
-  return (
+  // Portal to <body> so no ancestor's transform or backdrop-filter can trap the overlay.
+  return createPortal(
     <div className="modal-backdrop" onClick={onCancel}>
       <div
         role="dialog"
@@ -123,6 +125,7 @@ export function ConfirmDialog({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

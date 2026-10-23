@@ -1,5 +1,6 @@
 import type { PlayerView } from '@syndicate/game-engine';
 import { useEffect, useId, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { abilityText, ARCHETYPE_TAGLINE } from '../lib/roles';
 import { RoleSigil } from './RoleSigil';
 
@@ -26,7 +27,9 @@ export function HelpDialog({ view, onClose }: { view: PlayerView; onClose: () =>
     ...(r.roleCatalog.length ? ([['roles', 'Roles']] as [Tab, string][]) : []),
     ['score', 'Scoring'],
   ];
-  return (
+  // Portal to <body>: the sticky header uses backdrop-filter, which would otherwise
+  // become the containing block for this fixed-position overlay.
+  return createPortal(
     <div className="modal-backdrop" onClick={onClose}>
       <div
         role="dialog"
@@ -57,7 +60,7 @@ export function HelpDialog({ view, onClose }: { view: PlayerView; onClose: () =>
             </button>
           ))}
         </div>
-        <div role="tabpanel" className="overflow-y-auto p-4 text-sm flex flex-col gap-3">
+        <div role="tabpanel" tabIndex={0} className="overflow-y-auto p-4 text-sm flex flex-col gap-3">
           {tab === 'play' && (
             <>
               <p>
@@ -135,6 +138,7 @@ export function HelpDialog({ view, onClose }: { view: PlayerView; onClose: () =>
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
