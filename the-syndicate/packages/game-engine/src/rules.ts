@@ -2,7 +2,7 @@
 // using it until the match ends, so deploying new rules never changes a game in
 // progress. Add a new JSON file and registry entry for every rules change; never
 // edit a released version in place.
-import rules100 from '../../../config/rules-1.0.0.json';
+import rules100 from '../../../config/rules-1.0.0.json' with { type: 'json' };
 import type { Pace, Tier, TimedPhase } from './types';
 
 export interface TierRules {
