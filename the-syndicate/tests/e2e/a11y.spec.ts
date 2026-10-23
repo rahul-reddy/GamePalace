@@ -70,6 +70,10 @@ test('every in-match screen has no serious accessibility violations', async ({ p
   // Rules reference (both tabs) and the sound toggle, which starts muted.
   await page.getByRole('button', { name: 'Rules' }).click();
   await audit(page, 'Rules dialog');
+  // Focus stays where the user puts it while the header countdown keeps re-rendering.
+  await page.getByRole('tab', { name: 'Roles' }).focus();
+  await page.waitForTimeout(1200);
+  await expect(page.getByRole('tab', { name: 'Roles' })).toBeFocused();
   await page.getByRole('tab', { name: 'Roles' }).click();
   await expect(page.getByRole('tabpanel')).toContainText('Saboteur');
   await audit(page, 'Rules dialog: roles');

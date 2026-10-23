@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, type ReactNode } from 'react';
+import { useEffect, useId, useRef, type ReactNode, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
 
 export function Card({
@@ -56,6 +56,36 @@ export function Counter({
 }
 
 /**
+ * Dialog focus handling: focus `initial` when the dialog opens, close on Escape,
+ * and return focus to the previous element when it closes. The latest `onDismiss`
+ * is read through a ref, so a parent re-rendering (a ticking countdown, a new state
+ * message) never re-runs the effect and never steals focus from the user.
+ */
+export function useDialogFocus(
+  open: boolean,
+  onDismiss: () => void,
+  initial: RefObject<HTMLElement | null>,
+): void {
+  const dismiss = useRef(onDismiss);
+  useEffect(() => {
+    dismiss.current = onDismiss;
+  });
+  useEffect(() => {
+    if (!open) return;
+    const previous = document.activeElement as HTMLElement | null;
+    initial.current?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') dismiss.current();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      previous?.focus?.();
+    };
+  }, [open, initial]);
+}
+
+/**
  * Confirmation for irreversible actions. Focus moves into the dialog, Escape
  * cancels, and focus returns to the trigger when it closes.
  */
@@ -82,19 +112,7 @@ export function ConfirmDialog({
 }) {
   const titleId = useId();
   const confirmRef = useRef<HTMLButtonElement>(null);
-  useEffect(() => {
-    if (!open) return;
-    const previous = document.activeElement as HTMLElement | null;
-    confirmRef.current?.focus();
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onCancel();
-    };
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('keydown', onKey);
-      previous?.focus?.();
-    };
-  }, [open, onCancel]);
+  useDialogFocus(open, onCancel, confirmRef);
   if (!open) return null;
   // Portal to <body> so no ancestor's transform or backdrop-filter can trap the overlay.
   return createPortal(

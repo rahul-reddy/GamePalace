@@ -11,12 +11,36 @@ export function soundEnabled(): boolean {
   return enabled;
 }
 
+/**
+ * Browsers start an AudioContext suspended unless it is created or resumed during a
+ * user gesture. Turning sound on is a gesture; for players who enabled sound on an
+ * earlier visit, the first tap or key press anywhere resumes it.
+ */
+function unlock(): void {
+  if (!enabled) return;
+  try {
+    ctx ??= new AudioContext();
+    if (ctx.state === 'suspended') void ctx.resume();
+  } catch {
+    // Audio unavailable.
+  }
+}
+if (typeof window !== 'undefined') {
+  window.addEventListener('pointerdown', unlock, { capture: true });
+  window.addEventListener('keydown', unlock, { capture: true });
+}
+
 export function setSoundEnabled(on: boolean): void {
   enabled = on;
   saveSoundEnabled(on);
-  if (on) ctx ??= new AudioContext();
+  if (on) unlock();
   listeners.forEach((l) => l());
-  if (on) play('phase');
+  // A short confirmation chirp once the context is actually running.
+  if (on && ctx)
+    void ctx.resume().then(
+      () => play('phase'),
+      () => undefined,
+    );
 }
 
 export function onSoundChange(listener: () => void): () => void {
@@ -48,9 +72,9 @@ const PATTERNS = {
 export type SoundKind = keyof typeof PATTERNS;
 
 export function play(kind: SoundKind): void {
-  if (!enabled) return;
+  // Never create the context outside a gesture; until unlocked, stay silent.
+  if (!enabled || !ctx || ctx.state !== 'running') return;
   try {
-    ctx ??= new AudioContext();
     let t = ctx.currentTime;
     for (const [freq, dur] of PATTERNS[kind]) {
       const osc = ctx.createOscillator();

@@ -1,5 +1,6 @@
 import type { PlayerView } from '@syndicate/game-engine';
-import { useEffect, useId, useRef, useState } from 'react';
+import { useDialogFocus } from '@syndicate/ui';
+import { useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { abilityText, ARCHETYPE_TAGLINE } from '../lib/roles';
 import { RoleSigil } from './RoleSigil';
@@ -11,16 +12,7 @@ export function HelpDialog({ view, onClose }: { view: PlayerView; onClose: () =>
   const [tab, setTab] = useState<Tab>('play');
   const titleId = useId();
   const closeRef = useRef<HTMLButtonElement>(null);
-  useEffect(() => {
-    const previous = document.activeElement as HTMLElement | null;
-    closeRef.current?.focus();
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('keydown', onKey);
-      previous?.focus?.();
-    };
-  }, [onClose]);
+  useDialogFocus(true, onClose, closeRef);
   const r = view.rules;
   const tabs: [Tab, string][] = [
     ['play', 'How to play'],
