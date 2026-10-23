@@ -17,7 +17,7 @@ export function App() {
   const join = /^\/join(?:\/([A-Za-z0-9]{0,6}))?\/?$/.exec(path);
   if (join) return <Entry mode="join" initialCode={(join[1] ?? '').toUpperCase()} />;
   if (path === '/host') return <Entry mode="host" initialCode="" />;
-  if (path === '/how-to-play') return <HowToPlay />;
+  if (/^\/how-to-play\/?$/.test(path)) return <HowToPlay />;
   if (path !== '/') {
     navigate('/', true);
     return null;

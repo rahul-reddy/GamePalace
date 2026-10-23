@@ -65,4 +65,6 @@ test('the how-to-play guide opens from the homepage and works as a direct link @
   // A shared link opens the guide directly.
   await page.goto('/how-to-play');
   await expect(page.getByRole('heading', { name: 'Who wins' })).toBeVisible();
+  await page.goto('/how-to-play/');
+  await expect(page.getByRole('heading', { name: 'How to play', level: 1 })).toBeVisible();
 });
