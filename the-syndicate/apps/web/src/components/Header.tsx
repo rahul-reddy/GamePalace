@@ -2,6 +2,7 @@ import { Counter } from '@syndicate/ui';
 import { useState, useSyncExternalStore } from 'react';
 import { PHASE_HINT, PHASE_LABEL, useServerNow } from '../lib/format';
 import { onSoundChange, setSoundEnabled, soundEnabled } from '../lib/sound';
+import { DeviceDialog } from './DeviceDialog';
 import { HelpDialog } from './HelpDialog';
 import type { GameProps } from '../screens/Room';
 
@@ -20,6 +21,7 @@ export function Header({
   const fraction = total > 0 ? left / total : 0;
   const inMatch = view.phase !== 'LOBBY' && view.phase !== 'RESULTS';
   const [help, setHelp] = useState(false);
+  const [device, setDevice] = useState(false);
   const sound = useSyncExternalStore(onSoundChange, soundEnabled);
   return (
     <header className="sticky top-0 z-30 bg-[rgba(10,15,30,0.92)] backdrop-blur border-b border-[var(--color-border)]">
@@ -87,6 +89,15 @@ export function Header({
         <button
           type="button"
           className="btn btn-ghost btn-sm"
+          aria-label="Use on another device"
+          title="Use on another device"
+          onClick={() => setDevice(true)}
+        >
+          <span aria-hidden="true">📱</span>
+        </button>
+        <button
+          type="button"
+          className="btn btn-ghost btn-sm"
           aria-pressed={sound}
           aria-label={sound ? 'Sound on' : 'Sound off'}
           onClick={() => setSoundEnabled(!sound)}
@@ -95,6 +106,7 @@ export function Header({
         </button>
       </div>
       {help && <HelpDialog view={view} onClose={() => setHelp(false)} />}
+      {device && <DeviceDialog roomCode={roomCode} onClose={() => setDevice(false)} />}
     </header>
   );
 }

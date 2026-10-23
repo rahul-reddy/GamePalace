@@ -238,17 +238,24 @@ test.describe('E2E-MULTIPLAYER-001 @4p', () => {
     await b.page.screenshot({ path: `${SHOTS}/15-results-mobile.png`, fullPage: true });
 
     // 9. Scoreboard matches an independent replay of the server's own command log.
-    const log = (await (await a.page.request.post(`/api/test/rooms/${code}/replay`)).json()) as {
-      create: { seed: string } & Record<string, unknown>;
-      commands: CommandEnvelope[];
-    };
-    const { seed, ...create } = log.create;
-    const truth = determineWinners(
-      replay({ create: create as never, seed, commands: log.commands }),
+    // Test-only endpoint: present locally and in CI, absent on real deployments.
+    const replayResponse = await a.page.request.post(`/api/test/rooms/${code}/replay`);
+    if (!process.env.E2E_BASE_URL) expect(replayResponse.ok()).toBe(true);
+    const allTotals = await Promise.all(
+      all.map(async (s) => (await s.page.getByTestId('score-total').allTextContents()).map(Number)),
     );
-    for (const s of all) {
-      const totals = await s.page.getByTestId('score-total').allTextContents();
-      expect(totals.map(Number)).toEqual(truth.map((t) => t.total));
+    // Every player sees the same scoreboard.
+    expect(new Set(allTotals.map((t) => t.join(','))).size).toBe(1);
+    if (replayResponse.ok()) {
+      const log = (await replayResponse.json()) as {
+        create: { seed: string } & Record<string, unknown>;
+        commands: CommandEnvelope[];
+      };
+      const { seed, ...create } = log.create;
+      const truth = determineWinners(
+        replay({ create: create as never, seed, commands: log.commands }),
+      );
+      expect(allTotals[0]).toEqual(truth.map((t) => t.total));
     }
 
     // Network inspection: no socket frame ever carried another player's credits or intel,

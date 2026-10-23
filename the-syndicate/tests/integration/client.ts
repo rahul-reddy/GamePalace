@@ -86,7 +86,15 @@ export class Client {
 
   async open(token = this.seat.token): Promise<void> {
     this.closed = null;
-    this.ws = new WebSocket(`${base().replace(/^http/, 'ws')}/api/rooms/${this.seat.roomCode}/ws`);
+    // Undici's WebSocket accepts headers; the test identity spreads socket opens across the
+    // rate limiter the way many real clients would (honoured only in TEST_MODE).
+    const Ws = WebSocket as unknown as new (
+      url: string,
+      init: { headers: Record<string, string> },
+    ) => WebSocket;
+    this.ws = new Ws(`${base().replace(/^http/, 'ws')}/api/rooms/${this.seat.roomCode}/ws`, {
+      headers: { 'x-syndicate-test-client': `t-${Math.random()}` },
+    });
     this.ws.onmessage = (event) => this.receive(JSON.parse(String(event.data)) as ServerMessage);
     this.ws.onclose = (event) => {
       this.closed = { code: event.code, reason: event.reason };

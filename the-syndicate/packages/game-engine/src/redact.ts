@@ -335,7 +335,11 @@ export function redactViewForPlayer(state: GameState, playerId: string): PlayerV
     history: state.operations
       .filter((o) => o.result && o.round !== op?.round)
       .map((o) => publicOperation(state, o, revealAudit)),
-    deals: state.deals.filter((d) => d.members.includes(playerId)).map((d) => structuredClone(d)),
+    // Only this round's and last round's deals: older ones are settled, and resending
+    // them on every update was the largest part of a 12-player view.
+    deals: state.deals
+      .filter((d) => d.members.includes(playerId) && d.round >= state.round - 1)
+      .map((d) => structuredClone(d)),
     chat: state.chat.map((m) => ({ ...m })),
     log: state.log
       .filter((e) => visibleTo(e, playerId))

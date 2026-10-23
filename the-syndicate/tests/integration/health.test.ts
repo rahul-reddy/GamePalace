@@ -14,6 +14,7 @@ describe('worker basics (real workerd)', () => {
       service: 'the-syndicate',
       protocol: 1,
       rules: CURRENT_RULES_VERSION,
+      revision: 'dev',
     });
   });
 
