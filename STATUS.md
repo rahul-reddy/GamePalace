@@ -1,17 +1,18 @@
 # Status
 
 ## Current handoff (2026-10-23)
-- Merged: #1 harness, #7 engine, #8 rooms, #9 playable client, #10 roles + 10k balance evidence,
-  #15 rules dialog / sound / accessibility / 8-12 player browser tests, Dependabot #2-#6.
-- Branch `feat/syndicate-recovery`: crash-recovery test, device transfer, load test (100 rooms),
-  deploy script + self-test, runbook and cost model, release readiness report. All local checks
-  pass on this tree (see the-syndicate/SPRINT_STATUS.md).
-- Release status: `the-syndicate/docs/RELEASE_READINESS.md`. BLOCKED: Cloudflare deploy (needs
-  owner login), human playtests, production latency.
-- Open Dependabot PRs #11-#14 (npm): react/react-dom must merge together; check the dev group for
-  TypeScript 7 (typescript-eslint supports <6.1).
+- `main` at `c592adb`, CI green. THE SYNDICATE sprints 0-8 are merged: engine (rules 1.0.0 and
+  2.0.0), live rooms, playable client, secret roles, polish, accessibility, 8/12-player browser
+  tests, crash recovery, device transfer, load test, deploy tooling and docs.
+- Evidence and gate-by-gate status: `the-syndicate/docs/RELEASE_READINESS.md`; history:
+  `the-syndicate/CHANGELOG.md`; known issues: `the-syndicate/docs/KNOWN_ISSUES.md`.
+- BLOCKED on the owner: Cloudflare login and approval for a staging deploy; human playtests;
+  latency measurement on a dedicated environment. Next steps: `the-syndicate/NEXT_ACTION.md`.
+- Dependabot: react updates are grouped; TypeScript 7 and @types/node 26 are held (see
+  `.github/dependabot.yml`).
 
 ## History
+- 2026-10-23: PRs #17 (recovery/ops), #19 (seat-link encoding, changelog), #12 and #18 (Dependabot) merged; main green at c592adb.
 - 2026-10-23: PR #15 merged after gemini blocked focus stealing and suspended audio (both fixed with tests).
 - 2026-10-23: PR #10 merged after codex blocked 3 real engine bugs (stacked insurance, double tip, Promise Keeper) which were fixed with regression tests; gemini approved the fix.
 - 2026-10-23: PR #9 merged (playable client, golden path passing in CI in 49 s).
