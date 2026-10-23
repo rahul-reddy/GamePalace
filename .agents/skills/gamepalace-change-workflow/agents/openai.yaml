@@ -1,0 +1,4 @@
+interface:
+  display_name: "GamePalace Change Workflow"
+  short_description: "Build, test and review GamePalace changes"
+  default_prompt: "Use $gamepalace-change-workflow to implement and verify this GamePalace change."

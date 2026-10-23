@@ -1,0 +1,132 @@
+name: CI
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify:
+    name: Verify GamePalace
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history: the change classifier needs the parent and gitleaks scans history.
+          fetch-depth: 0
+      # A change to documentation alone skips the tests to save Actions minutes,
+      # but this job still runs and passes, because merge-pr.ps1 requires it.
+      # Docs-only means every changed path (both sides of a rename) is docs/** or
+      # a Markdown file at the repository root; Markdown anywhere else (skills,
+      # game folders) can be read by code or bundled. Anything this step cannot
+      # establish runs the full suite: only docs_only=true skips.
+      - name: Classify the change
+        id: scope
+        env:
+          EVENT: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          base=""
+          if [ "$EVENT" = pull_request ]; then
+            # The checkout is GitHub's merge of the PR into its base: its first
+            # parent is the base, so the diff to it is exactly the PR's change.
+            if [ "$(git rev-list --parents -n 1 HEAD | wc -w)" -eq 3 ]; then
+              base=$(git rev-parse HEAD^1)
+            fi
+          elif [ "$EVENT" = push ] && [ -n "$BEFORE" ] && [ "$BEFORE" != 0000000000000000000000000000000000000000 ]; then
+            git cat-file -e "$BEFORE^{commit}" 2>/dev/null && base="$BEFORE"
+          fi
+          if [ -z "$base" ] || ! changed=$(git diff --name-only --no-renames "$base" HEAD); then
+            echo "Could not list the change; running everything."
+            exit 0
+          fi
+          if [ -z "$changed" ]; then
+            echo "Empty change; running everything."
+            exit 0
+          fi
+          echo "$changed"
+          while IFS= read -r path; do
+            case "$path" in
+              docs/*) ;;
+              */*) echo "Not docs-only: $path"; exit 0 ;;
+              *.md) ;;
+              *) echo "Not docs-only: $path"; exit 0 ;;
+            esac
+          done <<< "$changed"
+          echo "docs_only=true" >> "$GITHUB_OUTPUT"
+      - name: "Docs-only change: skipping tests"
+        if: steps.scope.outputs.docs_only == 'true'
+        run: echo "Only docs/ or root Markdown changed; tests skipped. The secret scan still runs." | tee -a "$GITHUB_STEP_SUMMARY"
+      - uses: astral-sh/setup-uv@v6
+        if: steps.scope.outputs.docs_only != 'true'
+      - uses: actions/setup-node@v4
+        if: steps.scope.outputs.docs_only != 'true'
+        with:
+          node-version: '24'
+      - name: Verify agent harness
+        if: steps.scope.outputs.docs_only != 'true'
+        run: |
+          pwsh -NoProfile -File scripts/cross-review-selftest.ps1
+          uv run --no-project --with pyyaml==6.0.3 python scripts/validate_skills.py
+      # Every top-level folder with a pnpm workspace is a game. Each one exposes
+      # the same script names, so a new game is verified without editing this file.
+      - name: Verify every game
+        if: steps.scope.outputs.docs_only != 'true'
+        env:
+          CI: 'true'
+        run: |
+          corepack enable
+          found=0
+          for game in */; do
+            game=${game%/}
+            [ -f "$game/pnpm-workspace.yaml" ] || continue
+            found=1
+            echo "::group::$game"
+            (
+              set -euo pipefail
+              cd "$game"
+              pnpm install --frozen-lockfile
+              pnpm run lint
+              pnpm run format:check
+              pnpm run typecheck
+              pnpm run test:coverage
+              pnpm run build
+              pnpm run sim:check
+              pnpm exec playwright install --with-deps chromium
+              pnpm run test:integration
+              pnpm run test:e2e
+            )
+            echo "::endgroup::"
+          done
+          [ "$found" = 1 ] || echo "No game workspaces yet; harness checks only."
+      - uses: actions/upload-artifact@v4
+        if: always() && steps.scope.outputs.docs_only != 'true'
+        with:
+          name: verification-evidence
+          if-no-files-found: ignore
+          path: |
+            */coverage
+            */playwright-report
+            */test-results
+            */reports
+      - name: Dependency advisory
+        if: steps.scope.outputs.docs_only != 'true'
+        continue-on-error: true
+        run: |
+          for game in */; do
+            [ -f "$game/pnpm-workspace.yaml" ] || continue
+            (cd "$game" && pnpm audit --prod)
+          done
+      - name: Secret advisory
+        continue-on-error: true
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
