@@ -47,12 +47,34 @@ export const AVATARS = [
 ] as const;
 export type Avatar = (typeof AVATARS)[number];
 
+export const ARCHETYPES = [
+  'broker',
+  'insider',
+  'fixer',
+  'auditor',
+  'saboteur',
+  'opportunist',
+] as const;
+export type Archetype = (typeof ARCHETYPES)[number];
+export type AbilityKind = 'broker' | 'peek' | 'insure' | 'investigate' | 'sabotage' | 'forecast';
+export const OBJECTIVES = [
+  'backer',
+  'highRoller',
+  'reserve',
+  'dealmaker',
+  'cleanHands',
+  'promiseKeeper',
+  'contrarian',
+  'investor',
+] as const;
+export type ObjectiveId = (typeof OBJECTIVES)[number];
+
 export interface IntelReport {
   /** Round the estimate is about. */
   targetRound: number;
   /** Round in which the report was received. */
   receivedRound: number;
-  source: 'rumor' | 'contact';
+  source: 'rumor' | 'contact' | 'insider';
   /** Estimated base success chance, rounded. */
   estimate: number;
   /** Documented maximum error of this source (true value lies within estimate +/- this, before rounding). */
@@ -76,6 +98,38 @@ export interface PlayerState {
   muted: boolean;
   /** Private intel reports. */
   intel: IntelReport[];
+  /** Secret role id (rules with roles only), null otherwise. */
+  role: string | null;
+  /** Secret hidden objective (rules with roles only). */
+  objective: ObjectiveId | null;
+  /** Remaining uses of the role ability. */
+  charges: number;
+  accusationsMade: number;
+  /** Last round in which accusations raised this player's suspicion. */
+  accusedInRound: number;
+}
+
+/** A use of a role ability. Secret until the final reckoning (except what it publicly causes). */
+export interface AbilityUse {
+  round: number;
+  player: string;
+  ability: AbilityKind;
+  target: string | null;
+  /** peek: 'current' | 'next'; forecast: 'SUCCESS' | 'FAILURE'. */
+  choice: string | null;
+  /** investigate: the round investigated. */
+  targetRound: number | null;
+  /** Filled at resolution where relevant (e.g. "refunded 3", "correct"). */
+  effect: string | null;
+  /** sabotage only: exposure checks performed so far, and whether it has been exposed. */
+  checks: number;
+  exposed: boolean;
+}
+
+export interface Accusation {
+  round: number;
+  accuser: string;
+  target: string;
 }
 
 export interface OperationPayout {
@@ -84,6 +138,8 @@ export interface OperationPayout {
   creditsReturned: number;
   creditsLost: number;
   sitOutCredits: number;
+  /** Credits refunded by a Fixer's insurance (secret until the final reckoning). */
+  insuranceRefund?: number;
 }
 
 export interface OperationResult {
@@ -93,7 +149,11 @@ export interface OperationResult {
   targetMet: boolean;
   /** Final success chance after every modifier. Secret until the final reckoning. */
   finalChance: number;
+  /** Success-chance points removed by sabotage (capped). Secret until the final reckoning. */
+  sabotage?: number;
   payouts: Record<string, OperationPayout>;
+  /** Influence from role abilities this round (secret until the final reckoning). */
+  bonuses?: Record<string, { source: string; amount: number }[]>;
 }
 
 export interface Operation {
@@ -165,7 +225,13 @@ export type LogKind =
   | 'auto_pass'
   | 'match_capped'
   | 'match_finished'
-  | 'rematch';
+  | 'rematch'
+  | 'ability_used'
+  | 'ability_result'
+  | 'insured'
+  | 'accusation'
+  | 'exposed'
+  | 'bonus';
 
 export interface LogEntry {
   id: number;
@@ -182,14 +248,30 @@ export interface ScoreBreakdown {
   influence: number;
   creditPoints: number;
   objectiveBonus: number;
+  /** Correct accusations of a saboteur, awarded at the final reckoning. */
+  accusationBonus: number;
+  /** Suspicion penalty plus wrong-accusation penalties. */
   penalties: number;
   total: number;
   rank: number;
   winner: boolean;
 }
 
+export interface RoleReveal {
+  playerId: string;
+  role: string | null;
+  objective: ObjectiveId | null;
+  objectiveMet: boolean;
+  accusationBonus: number;
+  accusationPenalty: number;
+  suspicionPenalty: number;
+  /** Ability costs: fines for exposed sabotage and wrong forecasts. */
+  abilityPenalty: number;
+}
+
 export interface FinalResults {
   scores: ScoreBreakdown[];
+  reveals: RoleReveal[];
   winners: string[];
   /** The match seed, revealed so the outcomes can be audited against the rules. */
   seed: string;
@@ -238,6 +320,8 @@ export interface GameState {
   log: LogEntry[];
   nextLogId: number;
   results: FinalResults | null;
+  abilityUses: AbilityUse[];
+  accusations: Accusation[];
 }
 
 // ---- Commands -------------------------------------------------------------
@@ -254,6 +338,8 @@ export type PlayerCommand =
   | { type: 'proposeDeal'; invitees: string[]; terms: DealTerm[]; note: string }
   | { type: 'respondDeal'; dealId: string; accept: boolean }
   | { type: 'chat'; kind: 'text' | 'preset' | 'reaction'; text: string }
+  | { type: 'useAbility'; target?: string; choice?: string; targetRound?: number }
+  | { type: 'accuse'; target: string }
   | { type: 'rematch' };
 
 /** Commands only the server itself may issue. */

@@ -184,3 +184,41 @@ describe('rng and moderation details', () => {
     expect(cleanName('​​')).toBeNull();
   });
 });
+
+describe('legalActions agrees with applyCommand for roles (rules 2.0.0)', () => {
+  it('accepts a representative ability or accusation exactly when it is listed', () => {
+    fc.assert(
+      fc.property(fc.integer({ min: 0, max: 40 }), fc.integer({ min: 4, max: 12 }), (steps, n) => {
+        let state = started(n, `legal-roles-${steps}-${n}`, {}, '2.0.0');
+        for (let i = 0; i < steps && state.phase !== 'RESULTS'; i++) state = expire(state);
+        for (const p of state.players) {
+          const listed = legalActions(state, p.id);
+          const ability = listed.find((a) => a.type === 'useAbility');
+          const other = state.players.find((o) => o.id !== p.id)?.id as string;
+          const kind = state.players.find((x) => x.id === p.id)?.role;
+          const req: Record<string, unknown> = {
+            target: other,
+            targetRound: Math.max(1, state.round - 1),
+          };
+          if (kind === 'insider') req.choice = 'current';
+          else if (kind === 'informant') req.choice = 'current';
+          else if (kind === 'opportunist' || kind === 'speculator') req.choice = 'SUCCESS';
+          const tried = applyCommand(
+            state,
+            cmd(p.id, { type: 'useAbility', ...req } as never, state.phaseStartedAt + 1),
+          );
+          expect([p.role, state.phase, tried.ok]).toEqual([p.role, state.phase, Boolean(ability)]);
+          const accused = applyCommand(
+            state,
+            cmd(p.id, { type: 'accuse', target: other }, state.phaseStartedAt + 1),
+          );
+          expect([state.phase, accused.ok]).toEqual([
+            state.phase,
+            listed.some((a) => a.type === 'accuse'),
+          ]);
+        }
+      }),
+      { numRuns: 80 },
+    );
+  });
+});

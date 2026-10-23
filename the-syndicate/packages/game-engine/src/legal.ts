@@ -1,5 +1,6 @@
 import { currentOperation, findPlayer, intelCost, rulesOf } from './engine';
-import type { GameState } from './types';
+import { roleOf } from './roles';
+import type { AbilityKind, GameState } from './types';
 
 export type LegalAction =
   | { type: 'setReady' }
@@ -13,6 +14,8 @@ export type LegalAction =
   | { type: 'proposeDeal'; maxTerms: number }
   | { type: 'respondDeal'; dealIds: string[] }
   | { type: 'chat'; text: boolean }
+  | { type: 'useAbility'; ability: AbilityKind; charges: number }
+  | { type: 'accuse'; left: number }
   | { type: 'rematch' };
 
 /**
@@ -63,5 +66,26 @@ export function legalActions(state: GameState, playerId: string): LegalAction[] 
   }
   if (!me.muted) out.push({ type: 'chat', text: !state.settings.presetChatOnly });
   if (host && phase === 'RESULTS') out.push({ type: 'rematch' });
+  const def = roleOf(rules, me);
+  const usedThisRound = state.abilityUses.some(
+    (u) => u.player === playerId && u.round === state.round,
+  );
+  if (def && me.charges > 0 && !usedThisRound) {
+    const early = phase === 'INTELLIGENCE' || phase === 'NEGOTIATION';
+    const sealed = state.commitments[state.round]?.[playerId] !== undefined;
+    const commitWindow = phase === 'COMMITMENT' && !sealed;
+    const timingOk =
+      def.ability === 'peek' || def.ability === 'investigate'
+        ? early && (def.ability === 'peek' || state.round > 1)
+        : commitWindow;
+    if (timingOk) out.push({ type: 'useAbility', ability: def.ability, charges: me.charges });
+  }
+  if (rules.accusations && phase === 'NEGOTIATION') {
+    const left = rules.accusations.perMatch - me.accusationsMade;
+    const thisRound = state.accusations.some(
+      (a) => a.accuser === playerId && a.round === state.round,
+    );
+    if (left > 0 && !thisRound) out.push({ type: 'accuse', left });
+  }
   return out;
 }

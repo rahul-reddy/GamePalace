@@ -10,6 +10,10 @@ const EMPTY: Snapshot = {
   lastError: null,
 };
 
+// Stable fallbacks so React does not resubscribe on every render without a seat.
+const noSubscribe = () => () => {};
+const emptySnapshot = () => EMPTY;
+
 /** Opens (and closes) the room connection for one seat and exposes its live snapshot. */
 export function useRoom(roomCode: string, token: string | null) {
   const connection = useMemo(
@@ -21,8 +25,8 @@ export function useRoom(roomCode: string, token: string | null) {
     return () => connection?.stop();
   }, [connection]);
   const snapshot = useSyncExternalStore(
-    connection?.subscribe ?? (() => () => {}),
-    connection?.getSnapshot ?? (() => EMPTY),
+    connection?.subscribe ?? noSubscribe,
+    connection?.getSnapshot ?? emptySnapshot,
   );
   return { connection, ...snapshot };
 }

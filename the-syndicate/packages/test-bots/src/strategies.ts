@@ -246,16 +246,152 @@ const strategies: Record<StrategyName, Strategy> = {
   },
 };
 
+/** Players this bot has reason to believe are saboteurs: exposed, or flagged by its own audit. */
+function d_accepted(view: PlayerView, id: string): boolean {
+  return view.deals.some((d) => d.round === view.round && d.responses[id] === 'accepted');
+}
+
+function suspects(view: PlayerView, memory: Record<string, unknown>): string[] {
+  const exposed = view.players.filter((p) => p.exposed).map((p) => p.id);
+  const audited = view.log
+    .filter(
+      (e) =>
+        e.kind === 'ability_result' && e.data.ability === 'investigate' && e.data.result === true,
+    )
+    .map((e) => String(e.data.target));
+  const remembered = (memory.suspects as string[] | undefined) ?? [];
+  // Exposed players are public knowledge; accusing them is refused and earns nothing.
+  return [...new Set([...audited, ...remembered])].filter(
+    (id) => id !== view.self.id && !exposed.includes(id),
+  );
+}
+
+/**
+ * Role play shared by every strategy: when and how to use the secret ability, and
+ * whom to accuse. `style` tunes how eagerly the strategy acts on it.
+ */
+function roleCommands(strategy: StrategyName, ctx: BotContext): PlayerCommand[] {
+  const { view, rng, memory } = ctx;
+  const role = view.self.role;
+  const out: PlayerCommand[] = [];
+  const op = view.operation;
+  const p = estimateBase(view) + (op?.scenario.successDelta ?? 0);
+  const others = othersIds(view);
+  const canUse = role && role.charges > 0 && !view.self.abilityUsedThisRound;
+  const random = strategy === 'random';
+  if (view.phase === 'INTELLIGENCE' && canUse) {
+    if (role.ability === 'peek' && (random ? rng.next() < 0.5 : true)) {
+      const next =
+        Number(role.params.allowNext) === 1 && view.round < view.totalRounds && rng.next() < 0.3;
+      out.push({ type: 'useAbility', choice: next ? 'next' : 'current' });
+    }
+    if (role.ability === 'investigate' && view.round > 1 && role.params.scope === 'history') {
+      // Background check: prefer players who sat out a failed operation.
+      const checked = (memory.checked as string[] | undefined) ?? [];
+      const failedSitters = view.history
+        .filter((h) => h.result?.status === 'FAILURE')
+        .flatMap((h) => others.filter((id) => (h.result?.commitments[id] ?? 0) === 0));
+      const ranked = [...new Set([...failedSitters, ...rng.shuffle(others)])].filter(
+        (id) => !checked.includes(id),
+      );
+      if (ranked.length) {
+        memory.checked = [...checked, ranked[0] as string];
+        out.push({ type: 'useAbility', target: ranked[0] as string });
+      }
+    } else if (role.ability === 'investigate' && view.round > 1) {
+      // Investigate a backer of the most recent failed operation, or anyone at random.
+      const failed = [...view.history].reverse().find((h) => h.result?.status === 'FAILURE');
+      // Saboteurs tend to keep their own credits out of the operation they spoil.
+      const satOut = failed
+        ? others.filter((id) => (failed.result?.commitments[id] ?? 0) === 0)
+        : [];
+      const pool = satOut.length ? satOut : others;
+      const checked = (memory.checked as string[] | undefined) ?? [];
+      const candidates = pool.filter(
+        (id) => !checked.includes(`${id}:${failed?.round ?? view.round - 1}`),
+      );
+      if (candidates.length) {
+        const target = rng.pick(candidates);
+        const round = failed?.round ?? view.round - 1;
+        memory.checked = [...checked, `${target}:${round}`];
+        out.push({ type: 'useAbility', target, targetRound: round });
+      }
+    }
+  }
+  if (view.phase === 'NEGOTIATION' && view.self.accusationsLeft > 0 && view.features.roles) {
+    const already = new Set(
+      view.accusations.filter((a) => a.accuser === view.self.id).map((a) => a.target),
+    );
+    const targets = suspects(view, memory).filter((id) => !already.has(id));
+    const eager = strategy === 'detective' || strategy === 'exploiter';
+    if (targets.length && (eager || rng.next() < 0.6))
+      out.push({ type: 'accuse', target: targets[0] as string });
+    else if (strategy === 'random' && rng.next() < 0.1)
+      out.push({ type: 'accuse', target: rng.pick(others) });
+  }
+  if (view.phase === 'COMMITMENT' && canUse && op) {
+    switch (role.ability) {
+      case 'sabotage': {
+        const eager = strategy === 'saboteur' || strategy === 'aggressive';
+        const timing = view.round >= 2 || eager;
+        if (timing && (eager || rng.next() < 0.55 || view.round === view.totalRounds)) {
+          memory.sabotaged = view.round;
+          out.push({ type: 'useAbility' });
+        }
+        break;
+      }
+      case 'insure': {
+        // Insure a likely backer to earn the premium on success; insure yourself on long shots.
+        const self = Number(role.params.allowSelf) === 1;
+        const partner = view.deals
+          .find((d) => d.round === view.round && d.responses[view.self.id] === 'accepted')
+          ?.members.find((m) => m !== view.self.id && d_accepted(view, m));
+        const backers = view.history.at(-1)?.result?.commitments ?? {};
+        const likely = others.filter((id) => (backers[id] ?? 0) > 0);
+        const other = partner ?? (likely.length ? rng.pick(likely) : rng.pick(others));
+        const target = self && p < 0.45 ? view.self.id : other;
+        if (random ? rng.next() < 0.5 : p < 0.7 || view.round === view.totalRounds)
+          out.push({ type: 'useAbility', target });
+        break;
+      }
+      case 'broker':
+        if (p >= 0.45 || view.round === view.totalRounds) out.push({ type: 'useAbility' });
+        break;
+      case 'forecast': {
+        const confident = Math.abs(p - 0.5) > 0.1 || view.round >= view.totalRounds - 1;
+        if (confident || random)
+          out.push({ type: 'useAbility', choice: p >= 0.5 ? 'SUCCESS' : 'FAILURE' });
+        break;
+      }
+      default:
+        break;
+    }
+  }
+  return out;
+}
+
 export function botCommands(strategy: StrategyName, ctx: BotContext): PlayerCommand[] {
   const s = strategies[strategy];
+  const roleFirst = roleCommands(strategy, ctx);
+  let own: PlayerCommand[];
   switch (ctx.view.phase) {
     case 'INTELLIGENCE':
-      return s.intelligence?.(ctx) ?? [];
+      own = s.intelligence?.(ctx) ?? [];
+      break;
     case 'NEGOTIATION':
-      return s.negotiation?.(ctx) ?? [];
-    case 'COMMITMENT':
-      return s.commitment(ctx);
+      own = s.negotiation?.(ctx) ?? [];
+      break;
+    case 'COMMITMENT': {
+      own = s.commitment(ctx);
+      // Saboteurs keep their own credits out of the operation they sabotage.
+      if (ctx.memory.sabotaged === ctx.view.round) {
+        own = own.map((c) => (c.type === 'commit' ? { type: 'commit', amount: 0 } : c));
+      }
+      break;
+    }
     default:
-      return [];
+      own = [];
   }
+  // Abilities in the commitment phase must come before sealing.
+  return [...roleFirst, ...own];
 }

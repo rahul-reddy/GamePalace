@@ -30,13 +30,21 @@ export function cmd(
   return seed ? { actor, now, command, seed } : { actor, now, command };
 }
 
-export function lobby(n: number, settings: Partial<MatchSettings> = {}): GameState {
+/** Rules version used by the baseline suites; role suites pass '2.0.0'. */
+export const BASELINE = '1.0.0';
+
+export function lobby(
+  n: number,
+  settings: Partial<MatchSettings> = {},
+  rulesVersion = BASELINE,
+): GameState {
   let state = createGame(
     {
       hostId: 'p1',
       hostName: 'Ada',
       hostAvatar: 'fox',
       now: T0,
+      rulesVersion,
       settings: { beginner: false, ...settings },
     },
     'lobby-seed',
@@ -56,8 +64,9 @@ export function started(
   n: number,
   seed = 'test-seed',
   settings: Partial<MatchSettings> = {},
+  rulesVersion = BASELINE,
 ): GameState {
-  let state = lobby(n, settings);
+  let state = lobby(n, settings, rulesVersion);
   for (let i = 2; i <= n; i++) state = ok(state, cmd(`p${i}`, { type: 'setReady', ready: true }));
   return ok(state, cmd('p1', { type: 'start' }, T0, seed));
 }

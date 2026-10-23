@@ -1,22 +1,40 @@
+import { objectiveBonus, reckon } from './roles';
 import { getRules } from './rules';
-import type { FinalResults, GameState, Highlight, PlayerState, ScoreBreakdown } from './types';
+import type {
+  FinalResults,
+  GameState,
+  Highlight,
+  PlayerState,
+  RoleReveal,
+  ScoreBreakdown,
+} from './types';
 
-/** Final score = influence + floor(credits / creditsPerScorePoint) + objective bonus - penalties. */
+/**
+ * Final score = influence + floor(credits / creditsPerScorePoint) + endgame bonuses
+ * (hidden objective, correct accusations) - penalties (suspicion above the free
+ * allowance, wrong accusations, exposed sabotage, wrong forecasts). Pure: never changes the state.
+ */
 export function computeScore(
   state: GameState,
   player: PlayerState,
+  reveal?: RoleReveal,
 ): Omit<ScoreBreakdown, 'rank' | 'winner'> {
   const rules = getRules(state.rulesVersion);
   const creditPoints = Math.floor(player.credits / rules.economy.creditsPerScorePoint);
-  const objectiveBonus = 0;
-  const penalties = 0;
+  const objective = objectiveBonus(rules, reveal);
+  const accusationBonus = reveal?.accusationBonus ?? 0;
+  const penalties =
+    (reveal?.suspicionPenalty ?? 0) +
+    (reveal?.accusationPenalty ?? 0) +
+    (reveal?.abilityPenalty ?? 0);
   return {
     playerId: player.id,
     influence: player.influence,
     creditPoints,
-    objectiveBonus,
+    objectiveBonus: objective,
+    accusationBonus,
     penalties,
-    total: player.influence + creditPoints + objectiveBonus - penalties,
+    total: player.influence + creditPoints + objective + accusationBonus - penalties,
   };
 }
 
@@ -37,8 +55,13 @@ export function compareScores(
 }
 
 export function determineWinners(state: GameState): ScoreBreakdown[] {
+  const reveals = reckon(state, getRules(state.rulesVersion));
   const rows = state.players.map((p) => ({
-    ...computeScore(state, p),
+    ...computeScore(
+      state,
+      p,
+      reveals.find((r) => r.playerId === p.id),
+    ),
     suspicion: p.suspicion,
     credits: p.credits,
     seat: p.seat,
@@ -53,6 +76,7 @@ export function determineWinners(state: GameState): ScoreBreakdown[] {
       influence: row.influence,
       creditPoints: row.creditPoints,
       objectiveBonus: row.objectiveBonus,
+      accusationBonus: row.accusationBonus,
       penalties: row.penalties,
       total: row.total,
       rank,
@@ -99,6 +123,7 @@ export function finalizeResults(state: GameState): FinalResults {
   const top = scores[0];
   const result: FinalResults = {
     scores,
+    reveals: reckon(state, getRules(state.rulesVersion)),
     winners: scores.filter((s) => s.winner).map((s) => s.playerId),
     seed: state.seed,
     highlights: highlights(state),

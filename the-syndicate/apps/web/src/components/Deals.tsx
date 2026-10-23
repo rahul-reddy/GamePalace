@@ -174,7 +174,8 @@ export function Deals({ view, act }: GameProps) {
                   key={String(n)}
                   type="button"
                   aria-pressed={commit === n}
-                  className="chip min-h-[40px]"
+                  disabled={n !== null && commit === null && extra.length >= 3}
+                  className="chip min-h-[40px] disabled:opacity-40"
                   style={commit === n ? { borderColor: 'var(--color-gold)' } : undefined}
                   onClick={() => setCommit(n)}
                 >
@@ -185,12 +186,15 @@ export function Deals({ view, act }: GameProps) {
             <div className="flex flex-wrap gap-1.5">
               {(['shareIntel', 'noAccuse', 'backNext'] as const).map((kind) => {
                 const on = extra.includes(kind);
+                // A deal has at most three terms; a commit promise counts as one.
+                const full = !on && extra.length + (commit ? 1 : 0) >= 3;
                 return (
                   <button
                     key={kind}
                     type="button"
                     aria-pressed={on}
-                    className="chip min-h-[40px]"
+                    disabled={full}
+                    className="chip min-h-[40px] disabled:opacity-40"
                     style={on ? { borderColor: 'var(--color-gold)' } : undefined}
                     onClick={() =>
                       setExtra(on ? extra.filter((k) => k !== kind) : [...extra, kind])

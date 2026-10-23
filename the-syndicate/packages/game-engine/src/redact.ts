@@ -4,8 +4,15 @@
 // unless someone deliberately adds it here.
 import { currentOperation, findPlayer, intelCost, isInMatch } from './engine';
 import { getRules, scenarioById, type Scenario } from './rules';
+import { roleOf } from './roles';
 import type {
+  AbilityKind,
+  AbilityUse,
+  Accusation,
+  Archetype,
   ChatMessage,
+  ObjectiveId,
+  RoleReveal,
   Deal,
   GameState,
   Highlight,
@@ -31,12 +38,19 @@ export interface PublicPlayer {
   muted: boolean;
   /** True once this player's commitment for the current round is sealed (amount stays hidden). */
   sealed: boolean;
+  /** Public once a sabotage by this player has been exposed. */
+  exposed: boolean;
 }
 
 export interface OperationAudit {
   trueBase: number;
   finalChance: number;
   roll: number;
+  /** Points removed by sabotage, revealed with the roles. */
+  sabotage: number;
+  /** Ability bonuses and insurance refunds, revealed with the roles. */
+  bonuses: Record<string, { source: string; amount: number }[]>;
+  refunds: Record<string, number>;
 }
 
 export interface PublicOperationResult {
@@ -63,8 +77,29 @@ export interface PublicOperation {
   result: PublicOperationResult | null;
 }
 
+export interface RoleView {
+  id: string;
+  name: string;
+  archetype: Archetype;
+  ability: AbilityKind;
+  charges: number;
+  maxCharges: number;
+  params: Record<string, number | string>;
+}
+
+export interface ObjectiveView {
+  id: ObjectiveId;
+  bonus: number;
+  threshold: number;
+}
+
 export interface SelfView {
   id: string;
+  role: RoleView | null;
+  objective: ObjectiveView | null;
+  /** True once this player used their ability in the current round. */
+  abilityUsedThisRound: boolean;
+  accusationsLeft: number;
   credits: number;
   intel: IntelReport[];
   /** Sealed commitment for the current round, or null if not yet sealed. */
@@ -79,6 +114,9 @@ export interface ResultsView {
   winners: string[];
   highlights: Highlight[];
   finalCredits: Record<string, number>;
+  /** Every player's secret role and objective, and every ability use. */
+  reveals: RoleReveal[];
+  abilityUses: AbilityUse[];
   /** Revealed only in RESULTS. */
   seed: string | null;
 }
@@ -116,7 +154,11 @@ export interface PlayerView {
   deals: Deal[];
   chat: ChatMessage[];
   log: LogEntry[];
+  /** Public: who accused whom, and when. */
+  accusations: Accusation[];
   results: ResultsView | null;
+  /** Rule features enabled for this room. */
+  features: { roles: boolean };
 }
 
 function publicOperation(state: GameState, op: Operation, revealAudit: boolean): PublicOperation {
@@ -137,7 +179,18 @@ function publicOperation(state: GameState, op: Operation, revealAudit: boolean):
       commitments,
       influence,
       audit: revealAudit
-        ? { trueBase: op.trueBase, finalChance: op.result.finalChance, roll: op.roll }
+        ? {
+            trueBase: op.trueBase,
+            finalChance: op.result.finalChance,
+            roll: op.roll,
+            sabotage: op.result.sabotage ?? 0,
+            bonuses: structuredClone(op.result.bonuses ?? {}),
+            refunds: Object.fromEntries(
+              Object.entries(op.result.payouts)
+                .filter(([, p]) => p.insuranceRefund)
+                .map(([id, p]) => [id, p.insuranceRefund as number]),
+            ),
+          }
         : null,
     };
   }
@@ -189,10 +242,40 @@ export function redactViewForPlayer(state: GameState, playerId: string): PlayerV
     ready: p.ready,
     muted: p.muted,
     sealed: inCommitWindow && roundCommits[p.id] !== undefined,
+    exposed: state.abilityUses.some((u) => u.player === p.id && u.exposed),
   }));
   const committed = roundCommits[playerId];
+  const def = roleOf(rules, me);
+  const objectiveRule = rules.objectives?.find((o) => o.id === me.objective);
   const self: SelfView = {
     id: me.id,
+    role:
+      def && me.role
+        ? {
+            id: me.role,
+            name: def.name,
+            archetype: def.archetype,
+            ability: def.ability,
+            charges: me.charges,
+            maxCharges: def.charges,
+            params: { ...def.params },
+          }
+        : null,
+    objective:
+      objectiveRule && me.objective
+        ? {
+            id: me.objective,
+            bonus: objectiveRule.bonus,
+            threshold:
+              state.settings.length === 'quick' ? objectiveRule.quick : objectiveRule.standard,
+          }
+        : null,
+    abilityUsedThisRound: state.abilityUses.some(
+      (u) => u.player === playerId && u.round === state.round,
+    ),
+    accusationsLeft: rules.accusations
+      ? Math.max(0, rules.accusations.perMatch - me.accusationsMade)
+      : 0,
     credits: me.credits,
     intel: me.intel.map((i) => ({ ...i })),
     committed: committed === undefined ? null : committed,
@@ -207,6 +290,8 @@ export function redactViewForPlayer(state: GameState, playerId: string): PlayerV
       winners: [...state.results.winners],
       highlights: state.results.highlights.map((h) => ({ ...h })),
       finalCredits: Object.fromEntries(state.players.map((p) => [p.id, p.credits])),
+      reveals: state.results.reveals.map((r) => ({ ...r })),
+      abilityUses: state.abilityUses.map((u) => ({ ...u })),
       seed: state.phase === 'RESULTS' ? state.results.seed : null,
     };
   }
@@ -246,6 +331,8 @@ export function redactViewForPlayer(state: GameState, playerId: string): PlayerV
       .filter((e) => visibleTo(e, playerId))
       .slice(-80)
       .map(copyLog),
+    accusations: state.accusations.map((a) => ({ ...a })),
     results,
+    features: { roles: rules.roles !== undefined },
   };
 }

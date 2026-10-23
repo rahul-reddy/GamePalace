@@ -62,6 +62,22 @@ async function pressReady(seats: Seat[], label: string, next: string): Promise<v
   await waitPhase(seats, next);
 }
 
+/** Uses the role ability through the real UI if this phase offers it (any role, any target). */
+async function useAbilityIfOffered(page: Page): Promise<void> {
+  const panel = page.getByTestId('ability-panel');
+  if (!(await panel.isVisible())) return;
+  if (await panel.getByText('Used this operation').isVisible()) return;
+  for (const group of ['Target player', 'Forecast', 'Which operation', 'Operation to inspect']) {
+    const options = panel.getByRole('radiogroup', { name: group }).getByRole('radio');
+    if ((await options.count()) > 0) await options.last().click();
+  }
+  const action = panel.getByRole('button').last();
+  if (await action.isDisabled()) return;
+  await action.click();
+  await page.getByRole('button', { name: 'Do it' }).click();
+  await expect(panel).toContainText('Used this operation');
+}
+
 async function fillProfile(page: Page, name: string, avatar: string): Promise<void> {
   await page.getByLabel('Nickname').fill(name);
   await page.getByRole('radio', { name: avatar }).click();
@@ -113,11 +129,15 @@ test.describe('E2E-MULTIPLAYER-001 @4p', () => {
     await start.click();
     await waitPhase(all, 'Briefing');
 
-    // 4. Each player sees only their own private information.
+    // 4. Each player sees only their own private information: a secret role card.
+    const roleNames: string[] = [];
     for (const s of all) {
-      await expect(s.page.getByTestId('briefing')).toContainText('Independent Operator');
+      await expect(s.page.getByTestId('role-card')).toBeVisible();
+      roleNames.push(((await s.page.getByTestId('role-name').textContent()) ?? '').trim());
       await expect(s.page.getByTestId('my-credits')).toHaveText('10');
     }
+    expect(roleNames.every((r) => r.length > 0)).toBe(true);
+    expect(new Set(roleNames).size).toBe(4);
     await c.page.screenshot({ path: `${SHOTS}/04-briefing-mobile.png`, fullPage: true });
     await pressReady(all, 'Got it', 'Intelligence');
 
@@ -143,7 +163,18 @@ test.describe('E2E-MULTIPLAYER-001 @4p', () => {
         await c.page.close();
         await expect(a.page.getByTestId('player-2')).toContainText('offline');
       }
+      if (round === 2) {
+        // Intelligence-phase abilities (Insider reads odds; Auditor checks a record).
+        for (const s of present) await useAbilityIfOffered(s.page);
+      }
       await pressReady(present, 'Done studying', 'Negotiation');
+      if (round === 2) {
+        await a.page.getByRole('radiogroup', { name: 'Accuse' }).getByRole('radio').first().click();
+        await a.page.getByRole('button', { name: /^Accuse / }).click();
+        await a.page.getByRole('button', { name: 'Accuse publicly' }).click();
+        await expect(d.page.getByLabel('Accusations')).toContainText('Ada accused');
+        await a.page.screenshot({ path: `${SHOTS}/16-accusation.png`, fullPage: true });
+      }
       if (round === 1) {
         await a.page.getByRole('button', { name: 'Propose a deal' }).click();
         await a.page.getByRole('button', { name: 'Everyone' }).click();
@@ -165,6 +196,7 @@ test.describe('E2E-MULTIPLAYER-001 @4p', () => {
       await pressReady(all, 'Done negotiating', 'Sealed commitment');
       // 5. Sealed commitments with explicit confirmation and server acknowledgement.
       for (const [i, s] of all.entries()) {
+        if (round === 2) await useAbilityIfOffered(s.page);
         const amount = commitPlan[round - 1]?.[i] ?? 0;
         await s.page.getByTestId(`commit-${amount}`).click();
         await s.page.getByRole('button', { name: /^Seal \d credits?$/ }).click();
@@ -191,6 +223,11 @@ test.describe('E2E-MULTIPLAYER-001 @4p', () => {
       await pressReady(all, 'Continue', round < 5 ? 'Intelligence' : 'Final reckoning');
     }
 
+    // The final reckoning reveals every secret role.
+    for (const s of all) {
+      for (const name of roleNames)
+        await expect(s.page.getByTestId('role-reveal')).toContainText(name);
+    }
     await a.page.screenshot({ path: `${SHOTS}/14-final-reckoning-desktop.png`, fullPage: true });
     await pressReady(all, 'Continue', 'Results');
     await b.page.screenshot({ path: `${SHOTS}/15-results-mobile.png`, fullPage: true });

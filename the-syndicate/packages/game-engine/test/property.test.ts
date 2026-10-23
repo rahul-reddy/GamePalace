@@ -116,6 +116,7 @@ describe('engine properties', () => {
               hostName: 'Ada',
               hostAvatar: 'fox',
               now: T0,
+              rulesVersion: '1.0.0',
               settings: { beginner: false },
             },
             seed: 'lobby-seed',

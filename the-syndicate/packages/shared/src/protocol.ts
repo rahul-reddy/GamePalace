@@ -65,6 +65,15 @@ export const PlayerCommandInput = z.discriminatedUnion('type', [
     })
     .strict(),
   z.object({ type: z.literal('rematch') }).strict(),
+  z
+    .object({
+      type: z.literal('useAbility'),
+      target: Id.optional(),
+      choice: z.enum(['current', 'next', 'SUCCESS', 'FAILURE']).optional(),
+      targetRound: z.number().int().min(1).max(10).optional(),
+    })
+    .strict(),
+  z.object({ type: z.literal('accuse'), target: Id }).strict(),
 ]);
 export type PlayerCommandInput = z.infer<typeof PlayerCommandInput>;
 
