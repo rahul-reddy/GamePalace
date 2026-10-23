@@ -21,11 +21,15 @@ param(
     [Parameter(Mandatory = $true)][string]$Sha,
     [Parameter(Mandatory = $true)][ValidateSet('staging', 'production')][string]$Environment,
     [Parameter(Mandatory = $true)][ValidateRange(0, 1000)][int]$AcceptedMonthlyBudgetUsd,
+    # The typed confirmation, for operators running without an interactive console.
+    # It must still read exactly `deploy <short-sha>`.
+    [string]$ConfirmationText,
     # Only for automated tests of the bundling step.
     [switch]$BundleOnly,
     [string]$BundleDestination
 )
 $ErrorActionPreference = 'Stop'
+. "$PSScriptRoot/lib/dotenv.ps1"
 
 function Get-RepositoryRoot {
     $root = (git rev-parse --show-toplevel).Trim()
@@ -81,8 +85,13 @@ $short = $full.Substring(0, 7)
 $subject = (git -C $root log -1 --format=%s $full).Trim()
 Write-Host "Deploying $short ($subject) to $Environment."
 Write-Host "Accepted monthly budget: `$$AcceptedMonthlyBudgetUsd. Cloudflare bills by plan and usage; this script does not cap it."
-$answer = Read-Host "Type 'deploy $short' to continue"
+$answer = if ($ConfirmationText) { $ConfirmationText } else { Read-Host "Type 'deploy $short' to continue" }
 if ($answer -ne "deploy $short") { throw 'Confirmation did not match; nothing deployed.' }
+
+# Cloudflare credentials: the repository's ignored .env (or the environment, or a
+# prior `wrangler login`). Values are never printed.
+$credentials = Import-DotEnvKeys -Path (Join-Path $root '.env') -Keys @('CLOUDFLARE_API_TOKEN', 'CLOUDFLARE_ACCOUNT_ID')
+Write-Host ("Cloudflare credentials from environment/.env: " + $(if ($credentials) { $credentials -join ', ' } else { 'none (using wrangler login)' }))
 
 $work = Join-Path ([IO.Path]::GetTempPath()) ("syndicate-deploy-" + $short + '-' + [guid]::NewGuid())
 try {
