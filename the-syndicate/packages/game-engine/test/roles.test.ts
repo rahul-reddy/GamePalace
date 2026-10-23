@@ -222,7 +222,7 @@ describe('fixer and underwriter', () => {
     const win = allCommit(setOp(state, { roll: 0 }), 3);
     const shares = win.operations[0]?.result?.payouts;
     expect(win.players[0]?.influence).toBe((shares?.p1?.influence ?? 0) + 2);
-    expect(win.players[1]?.influence).toBe((shares?.p2?.influence ?? 0) + 1);
+    expect(win.players[1]?.influence).toBe((shares?.p2?.influence ?? 0) + 2);
   });
 
   it('pays no premium for insuring yourself', () => {

@@ -130,6 +130,42 @@ describe('engine properties', () => {
     );
   });
 
+  it('upgrades rooms saved before roles existed', () => {
+    const old = JSON.parse(serialize(started(4))) as Record<string, unknown> & {
+      players: Record<string, unknown>[];
+    };
+    delete old.abilityUses;
+    delete old.accusations;
+    for (const p of old.players) {
+      delete p.role;
+      delete p.objective;
+      delete p.charges;
+      delete p.accusationsMade;
+      delete p.accusedInRound;
+    }
+    const upgraded = deserialize(JSON.stringify(old));
+    expect(upgraded.abilityUses).toEqual([]);
+    expect(upgraded.players.every((p) => p.role === null && p.charges === 0)).toBe(true);
+    // The upgraded room keeps playing to the end.
+    let state = upgraded;
+    for (let i = 0; i < 40 && state.phase !== 'RESULTS'; i++) {
+      state = applyCommand(state, {
+        actor: 'system',
+        now: (state.phaseEndsAt ?? T0) + 1,
+        command: { type: 'tick' },
+      }).ok
+        ? (
+            applyCommand(state, {
+              actor: 'system',
+              now: (state.phaseEndsAt ?? T0) + 1,
+              command: { type: 'tick' },
+            }) as { state: GameState }
+          ).state
+        : state;
+    }
+    expect(state.phase).toBe('RESULTS');
+  });
+
   it('round-trips through serialization', () => {
     const state = started(6);
     expect(deserialize(serialize(state))).toEqual(state);

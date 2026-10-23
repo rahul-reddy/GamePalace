@@ -1,7 +1,7 @@
 # Next action
 
-Sprint 4 (full deception mechanics): add rules version 2.0.0 with the six role archetypes
-(Broker, Insider, Fixer, Auditor, Saboteur, Opportunist), suspicion and accusations, hidden
-objectives and the final role reveal, with exact timing/caps/probabilities in docs/RULES.md,
-engine tests at phase boundaries and exhaustion, secrecy tests for role data, and UI controls.
-Keep rules 1.0.0 playable for rooms created before the change.
+Sprint 5-6 (polish and scale): guided first-round tutorial and role reference, optional muted-by-
+default sound, accessibility audit (axe) and 375/390/768/1280 px layout checks, then real 8- and
+12-player Playwright runs (`test:e2e:12p`) and a 12-player layout pass. After that, Sprint 7
+recovery tests (kill and restart workerd mid-match) and Sprint 8 load test, deploy script,
+runbook and cost model.

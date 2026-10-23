@@ -1,3 +1,4 @@
+import { CURRENT_RULES_VERSION } from '@syndicate/game-engine';
 import { describe, expect, it } from 'vitest';
 
 const BASE = process.env.SYNDICATE_BASE_URL ?? 'http://127.0.0.1:8791';
@@ -8,7 +9,12 @@ describe('worker basics (real workerd)', () => {
     expect(r.status).toBe(200);
     expect(r.headers.get('cache-control')).toBe('no-store');
     const body = (await r.json()) as Record<string, unknown>;
-    expect(body).toMatchObject({ ok: true, service: 'the-syndicate', protocol: 1, rules: '1.0.0' });
+    expect(body).toMatchObject({
+      ok: true,
+      service: 'the-syndicate',
+      protocol: 1,
+      rules: CURRENT_RULES_VERSION,
+    });
   });
 
   it('completes a WebSocket handshake', async () => {

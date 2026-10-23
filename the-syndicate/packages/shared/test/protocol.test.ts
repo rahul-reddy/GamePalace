@@ -77,3 +77,30 @@ describe('protocol schemas', () => {
     ).toBe(false);
   });
 });
+
+describe('role commands', () => {
+  it('accepts well-formed ability uses and accusations', () => {
+    for (const command of [
+      { type: 'useAbility' },
+      { type: 'useAbility', choice: 'next' },
+      { type: 'useAbility', target: 'p_abc', targetRound: 2 },
+      { type: 'useAbility', choice: 'FAILURE' },
+      { type: 'accuse', target: 'p_abc' },
+    ]) {
+      expect([command, PlayerCommandInput.safeParse(command).success]).toEqual([command, true]);
+    }
+  });
+
+  it('rejects malformed ability uses and accusations', () => {
+    for (const command of [
+      { type: 'useAbility', choice: 'maybe' },
+      { type: 'useAbility', targetRound: 0 },
+      { type: 'useAbility', target: 'has space' },
+      { type: 'useAbility', role: 'saboteur' },
+      { type: 'accuse' },
+      { type: 'accuse', target: 'p_abc', reason: 'x' },
+    ]) {
+      expect([command, PlayerCommandInput.safeParse(command).success]).toEqual([command, false]);
+    }
+  });
+});

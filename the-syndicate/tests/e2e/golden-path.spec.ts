@@ -122,6 +122,11 @@ test.describe('E2E-MULTIPLAYER-001 @4p', () => {
     await b.page.screenshot({ path: `${SHOTS}/03-lobby-guest-mobile.png`, fullPage: true });
 
     // 3. Everyone readies; A starts.
+    // Relaxed pace keeps phase timers well above test step times on slow machines.
+    await a.page
+      .getByRole('group', { name: 'Pace' })
+      .getByRole('button', { name: 'Relaxed' })
+      .click();
     const start = a.page.getByRole('button', { name: 'Start match' });
     await expect(start).toBeDisabled();
     for (const s of [b, c, d]) await s.page.getByRole('button', { name: "I'm ready" }).click();

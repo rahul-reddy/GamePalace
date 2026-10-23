@@ -156,7 +156,7 @@
         "charges": 2,
         "params": {
           "bonus": 3,
-          "minOthers": 2,
+          "minOthers": 3,
           "othersBonus": 1
         }
       },
@@ -177,13 +177,13 @@
         "archetype": "insider",
         "name": "Informant",
         "ability": "peek",
-        "charges": 3,
+        "charges": 2,
         "params": {
           "noiseNext": 0.075,
           "noiseCurrent": 0.075,
           "allowCurrent": 1,
           "allowNext": 0,
-          "tipBonus": 1
+          "tipBonus": 2
         }
       },
       "fixer": {
@@ -201,11 +201,11 @@
         "archetype": "fixer",
         "name": "Underwriter",
         "ability": "insure",
-        "charges": 3,
+        "charges": 2,
         "params": {
           "refundShare": 0.5,
           "allowSelf": 0,
-          "premium": 1
+          "premium": 2
         }
       },
       "auditor": {
@@ -281,94 +281,34 @@
     },
     "distribution": {
       "4": {
-        "fixed": [
-          "saboteur",
-          "auditor"
-        ],
+        "fixed": ["saboteur", "auditor"],
         "pick": 2,
-        "from": [
-          "broker",
-          "insider",
-          "fixer",
-          "opportunist"
-        ]
+        "from": ["broker", "insider", "fixer", "opportunist"]
       },
       "5": {
-        "fixed": [
-          "saboteur",
-          "auditor"
-        ],
+        "fixed": ["saboteur", "auditor"],
         "pick": 3,
-        "from": [
-          "broker",
-          "insider",
-          "fixer",
-          "opportunist"
-        ]
+        "from": ["broker", "insider", "fixer", "opportunist"]
       },
       "6": {
-        "fixed": [
-          "saboteur",
-          "auditor",
-          "broker",
-          "insider",
-          "fixer",
-          "opportunist"
-        ],
+        "fixed": ["saboteur", "auditor", "broker", "insider", "fixer", "opportunist"],
         "pick": 0,
         "from": []
       },
       "7": {
-        "fixed": [
-          "saboteur",
-          "auditor",
-          "broker",
-          "insider",
-          "fixer",
-          "opportunist"
-        ],
+        "fixed": ["saboteur", "auditor", "broker", "insider", "fixer", "opportunist"],
         "pick": 1,
-        "from": [
-          "kingmaker",
-          "informant",
-          "underwriter",
-          "speculator"
-        ]
+        "from": ["kingmaker", "informant", "underwriter", "speculator"]
       },
       "8": {
-        "fixed": [
-          "saboteur",
-          "auditor",
-          "broker",
-          "insider",
-          "fixer",
-          "opportunist"
-        ],
+        "fixed": ["saboteur", "auditor", "broker", "insider", "fixer", "opportunist"],
         "pick": 2,
-        "from": [
-          "kingmaker",
-          "informant",
-          "underwriter",
-          "speculator"
-        ]
+        "from": ["kingmaker", "informant", "underwriter", "speculator"]
       },
       "9": {
-        "fixed": [
-          "saboteur",
-          "mole",
-          "auditor",
-          "broker",
-          "insider",
-          "fixer",
-          "opportunist"
-        ],
+        "fixed": ["saboteur", "mole", "auditor", "broker", "insider", "fixer", "opportunist"],
         "pick": 2,
-        "from": [
-          "kingmaker",
-          "informant",
-          "underwriter",
-          "speculator"
-        ]
+        "from": ["kingmaker", "informant", "underwriter", "speculator"]
       },
       "10": {
         "fixed": [
@@ -382,12 +322,7 @@
           "opportunist"
         ],
         "pick": 2,
-        "from": [
-          "kingmaker",
-          "informant",
-          "underwriter",
-          "speculator"
-        ]
+        "from": ["kingmaker", "informant", "underwriter", "speculator"]
       },
       "11": {
         "fixed": [
@@ -401,12 +336,7 @@
           "opportunist"
         ],
         "pick": 3,
-        "from": [
-          "kingmaker",
-          "informant",
-          "underwriter",
-          "speculator"
-        ]
+        "from": ["kingmaker", "informant", "underwriter", "speculator"]
       },
       "12": {
         "fixed": [
@@ -420,12 +350,7 @@
           "opportunist"
         ],
         "pick": 4,
-        "from": [
-          "kingmaker",
-          "informant",
-          "underwriter",
-          "speculator"
-        ]
+        "from": ["kingmaker", "informant", "underwriter", "speculator"]
       }
     },
     "maxSabotagePerOperation": 0.3
@@ -449,8 +374,8 @@
     {
       "id": "backer",
       "bonus": 3,
-      "standard": 3,
-      "quick": 2
+      "standard": 4,
+      "quick": 3
     },
     {
       "id": "highRoller",
@@ -472,7 +397,7 @@
     },
     {
       "id": "cleanHands",
-      "bonus": 2,
+      "bonus": 1,
       "standard": 0,
       "quick": 0
     },
@@ -485,7 +410,7 @@
     {
       "id": "contrarian",
       "bonus": 2,
-      "standard": 2,
+      "standard": 1,
       "quick": 1
     },
     {
