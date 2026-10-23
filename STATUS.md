@@ -6,12 +6,13 @@
   tests, crash recovery, device transfer, load test, deploy tooling and docs.
 - Evidence and gate-by-gate status: `the-syndicate/docs/RELEASE_READINESS.md`; history:
   `the-syndicate/CHANGELOG.md`; known issues: `the-syndicate/docs/KNOWN_ISSUES.md`.
-- BLOCKED on the owner: Cloudflare login and approval for a staging deploy; human playtests;
-  latency measurement on a dedicated environment. Next steps: `the-syndicate/NEXT_ACTION.md`.
+- Staging deployed 2026-10-23: https://the-syndicate-staging.syndicate-worker.workers.dev (commit `896146c`), verified by health check and 10 browser
+  tests over the internet. Remaining: human playtests, latency on a dedicated environment, production. Next steps: `the-syndicate/NEXT_ACTION.md`.
 - Dependabot: react updates are grouped; TypeScript 7 and @types/node 26 are held (see
   `.github/dependabot.yml`).
 
 ## History
+- 2026-10-23: PR #22 (deploy credentials from .env) merged; `896146c` deployed to staging and verified.
 - 2026-10-23: PRs #17 (recovery/ops), #19 (seat-link encoding, changelog), #12 and #18 (Dependabot) merged; main green at c592adb.
 - 2026-10-23: PR #15 merged after gemini blocked focus stealing and suspended audio (both fixed with tests).
 - 2026-10-23: PR #10 merged after codex blocked 3 real engine bugs (stacked insurance, double tip, Promise Keeper) which were fixed with regression tests; gemini approved the fix.
