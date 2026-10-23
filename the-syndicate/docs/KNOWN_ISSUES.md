@@ -2,9 +2,8 @@
 
 ## Blocked on things outside the repository
 
-1. **Not deployed.** Deployment needs a Cloudflare account login and the owner's go-ahead. Everything
-   needed is in place (`scripts/deploy.ps1`, `docs/OPERATIONS.md`), and the bundling step is
-   self-tested.
+1. **Production not deployed.** Staging is live and verified; production waits for playtests and
+   the owner's go-ahead (`scripts/deploy.ps1 -Environment production`).
 2. **No human playtests.** All balance evidence comes from bots (`docs/BALANCE.md`). The plan asks
    for at least three real matches; that needs people. Questions to answer in those sessions are
    listed in `docs/BALANCE.md`.

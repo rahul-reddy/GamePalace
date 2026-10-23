@@ -12,8 +12,9 @@ Both deployed environments use the same code and bindings (`apps/worker/wrangler
 with its own Durable Object namespaces, so staging rooms never touch production. `TEST_MODE` is
 `"0"` in both; never change that, because it enables test-only endpoints.
 
-**Status:** nothing has been deployed. Deploying needs a Cloudflare account; the owner runs
-`wrangler login` once. No paid services are required (see the cost model).
+**Status (2026-10-23):** staging is deployed at https://the-syndicate-staging.syndicate-worker.workers.dev (Workers Free plan). Production is not
+deployed. Credentials: `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` in the repository's
+git-ignored `.env` (read by the deploy script, never printed), or a prior `wrangler login`.
 
 ## Deploy
 
