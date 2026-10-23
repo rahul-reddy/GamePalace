@@ -253,11 +253,13 @@ export function applyResolutionAbilities(
         const target = state.players.find((p) => p.id === use.target);
         if (!target) break;
         const lost = result.status === 'FAILURE' ? committed(target.id) : 0;
-        const refund = Math.min(lost, Math.ceil(lost * num(def, 'refundShare')));
+        // Several policies on one player never refund more than that player lost in total.
+        const payout = result.payouts[target.id];
+        const alreadyRefunded = payout?.insuranceRefund ?? 0;
+        const refund = Math.min(lost - alreadyRefunded, Math.ceil(lost * num(def, 'refundShare')));
         if (refund > 0) {
           target.credits = Math.min(cap, target.credits + refund);
-          const payout = result.payouts[target.id];
-          if (payout) payout.insuranceRefund = refund;
+          if (payout) payout.insuranceRefund = alreadyRefunded + refund;
         }
         use.effect = refund > 0 ? `refunded ${refund}` : 'no loss';
         log(
@@ -307,12 +309,16 @@ export function applyResolutionAbilities(
     }
   }
   // Insider tip: backing an operation you read in advance pays when it succeeds.
+  // At most one tip per player per operation, however many times they read it.
   if (result.status === 'SUCCESS') {
+    const tipped = new Set<string>();
     for (const use of state.abilityUses) {
-      if (use.ability !== 'peek' || use.targetRound !== state.round) continue;
+      if (use.ability !== 'peek' || use.targetRound !== state.round || tipped.has(use.player))
+        continue;
       const me = state.players.find((p) => p.id === use.player);
       const def = me ? roleOf(rules, me) : null;
       if (!me || !def || committed(me.id) <= 0) continue;
+      tipped.add(me.id);
       give(me, num(def, 'tipBonus'), 'tip');
     }
   }
@@ -416,8 +422,10 @@ export function objectiveMet(state: GameState, rules: RulesConfig, p: PlayerStat
     case 'cleanHands':
       return p.suspicion <= threshold;
     case 'promiseKeeper': {
-      const kept = state.deals.filter((d) => d.kept?.[p.id] === true).length;
-      const broken = state.deals.filter((d) => d.kept?.[p.id] === false).length;
+      // Only deals with a commit term count: the objective is about keeping commit promises.
+      const commitDeals = state.deals.filter((d) => d.terms.some((t) => t.kind === 'commit'));
+      const kept = commitDeals.filter((d) => d.kept?.[p.id] === true).length;
+      const broken = commitDeals.filter((d) => d.kept?.[p.id] === false).length;
       return kept >= threshold && broken === 0;
     }
     case 'contrarian':

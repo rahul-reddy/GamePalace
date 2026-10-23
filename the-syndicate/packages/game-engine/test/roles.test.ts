@@ -504,3 +504,59 @@ describe('tuned costs and bonuses (rules 2.0.0)', () => {
     expect(checked.abilityUses.at(-1)?.targetRound).toBeNull();
   });
 });
+
+describe('regressions from cross-review of PR #10', () => {
+  it('never refunds more than the actual loss when two policies cover one player, in either order', () => {
+    for (const order of [
+      ['p1', 'p2'],
+      ['p2', 'p1'],
+    ]) {
+      let state = withRoles(4, { p1: 'fixer', p2: 'underwriter', p3: 'broker', p4: 'auditor' });
+      state = advanceTo(state, 'COMMITMENT');
+      for (const insurer of order) state = ok(state, ability(insurer, { target: 'p3' }));
+      state = allCommit(setOp(state, { roll: 0.99 }), 3);
+      expect(state.operations[0]?.result?.status).toBe('FAILURE');
+      // p3 lost 3 and gets back exactly 3, never 3 + 2.
+      expect(state.players[2]?.credits).toBe(10);
+      expect(state.operations[0]?.result?.payouts.p3?.insuranceRefund).toBe(3);
+    }
+  });
+
+  it('pays one insider tip per operation even if it was read twice', () => {
+    let state = withRoles(4, { p1: 'insider', p2: 'broker', p3: 'fixer', p4: 'auditor' });
+    state = advanceTo(state, 'INTELLIGENCE');
+    state = ok(state, ability('p1', { choice: 'next' }));
+    state = allCommit(advanceTo(state, 'COMMITMENT'), 0);
+    state = advanceTo(state, 'INTELLIGENCE');
+    expect(state.round).toBe(2);
+    state = ok(state, ability('p1', { choice: 'current' }));
+    state = advanceTo(state, 'COMMITMENT');
+    const win = allCommit(setOp(state, { roll: 0 }), (id) => (id === 'p1' ? 1 : 0));
+    const share = win.operations[1]?.result?.payouts.p1?.influence ?? 0;
+    expect(win.players[0]?.influence).toBe(share + 2);
+  });
+
+  it('does not count no-accusation deals toward Promise Keeper', () => {
+    let state = withRoles(4, { p1: 'broker', p2: 'fixer', p3: 'insider', p4: 'auditor' });
+    state.players[0]!.objective = 'promiseKeeper';
+    for (let round = 1; round <= 2; round++) {
+      state = advanceTo(state, 'NEGOTIATION');
+      state = ok(
+        state,
+        cmd('p1', {
+          type: 'proposeDeal',
+          invitees: ['p2'],
+          terms: [{ kind: 'noAccuse' }],
+          note: '',
+        }),
+      );
+      state = ok(
+        state,
+        cmd('p2', { type: 'respondDeal', dealId: state.deals.at(-1)?.id as string, accept: true }),
+      );
+      state = allCommit(advanceTo(state, 'COMMITMENT'), 0);
+    }
+    expect(state.deals.filter((d) => d.kept?.p1 === true)).toHaveLength(2);
+    expect(objectiveMet(state, rules, state.players[0] as never)).toBe(false);
+  });
+});
