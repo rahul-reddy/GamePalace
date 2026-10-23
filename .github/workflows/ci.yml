@@ -18,7 +18,7 @@ jobs:
       contents: read
       pull-requests: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # Full history: the change classifier needs the parent and gitleaks scans history.
           fetch-depth: 0
