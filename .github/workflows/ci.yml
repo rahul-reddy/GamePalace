@@ -117,6 +117,7 @@ jobs:
             */playwright-report
             */test-results
             */reports
+            */artifacts
       - name: Dependency advisory
         if: steps.scope.outputs.docs_only != 'true'
         continue-on-error: true

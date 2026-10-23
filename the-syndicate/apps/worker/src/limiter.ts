@@ -27,8 +27,11 @@ export class RateLimiter extends DurableObject {
     recent.push(now);
     this.hits.set(key, recent);
     if (this.hits.size > 5000) {
-      for (const [k, times] of this.hits)
-        if (times.every((t) => now - t >= windowMs)) this.hits.delete(k);
+      // Each key's own window decides whether its entry is stale.
+      for (const [k, times] of this.hits) {
+        const window = LIMITS[k.split(':')[0] as LimitKind].windowMs;
+        if (times.every((t) => now - t >= window)) this.hits.delete(k);
+      }
     }
     return true;
   }

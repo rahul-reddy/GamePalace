@@ -14,6 +14,7 @@ import {
   createGame,
   deserialize,
   findPlayer,
+  getRules,
   redactViewForPlayer,
   serialize,
   type Avatar,
@@ -352,7 +353,7 @@ export class Room extends DurableObject<Env> {
   async summary(): Promise<RoomSummary | null> {
     if (!this.load()) return null;
     const game = this.game as GameState;
-    const max = 12;
+    const max = getRules(game.rulesVersion).players.max;
     return {
       roomCode: (this.meta as Meta).code,
       phase: game.phase,
