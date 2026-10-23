@@ -23,3 +23,4 @@ blob-report/
 .vitest-cache/
 __pycache__/
 *.log
+reports/

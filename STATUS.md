@@ -1,13 +1,12 @@
 # Status
 
 ## Current handoff (2026-10-23)
-- Branch `feat/workflow-harness`: review/merge harness copied from TenFold `336a043`, contract
-  (`AGENTS.md`, `CLAUDE.md`), CI (`Verify GamePalace`), Windows harness workflow, Dependabot,
-  PR template and the `gamepalace-change-workflow` skill.
-- Verified locally on this branch: `pwsh -NoProfile -File scripts/cross-review-selftest.ps1`
-  (passed) and `uv run --no-project --with pyyaml python scripts/validate_skills.py`.
-- Not yet: any game code. Next: THE SYNDICATE rules spec and pure game engine
-  (`the-syndicate/packages/game-engine`).
+- Harness merged (PR #1). `main` requires the `Verify GamePalace` check.
+- Branch `feat/syndicate-foundation`: THE SYNDICATE Sprint 0 (monorepo, Worker health and socket
+  probe, landing page) and Sprint 1 (deterministic engine, bots, simulator). Detailed evidence
+  and remaining risks: `the-syndicate/SPRINT_STATUS.md`; next step: `the-syndicate/NEXT_ACTION.md`.
+- Owner's build plan: `THE_SYNDICATE_AGENT_BUILD_PLAN.md` (followed sprint by sprint).
 
 ## History
+- 2026-10-23: PR #1 merged: review/merge harness from TenFold `336a043`, CI, Dependabot.
 - 2026-10-23: Repository created empty by the owner; harness setup started.

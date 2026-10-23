@@ -1,0 +1,105 @@
+{
+  "version": "1.0.0",
+  "players": { "min": 4, "max": 12 },
+  "economy": {
+    "startingCredits": 10,
+    "creditCap": 30,
+    "maxCommit": 3,
+    "sitOutCredits": 1,
+    "creditsPerScorePoint": 3
+  },
+  "rounds": { "standard": 5, "quick": 3 },
+  "timing": {
+    "phaseMs": {
+      "ROLE_REVEAL": 25000,
+      "INTELLIGENCE": 35000,
+      "NEGOTIATION": 75000,
+      "COMMITMENT": 25000,
+      "RESOLUTION": 15000,
+      "ROUND_SUMMARY": 15000,
+      "FINAL_RECKONING": 30000
+    },
+    "paceMultipliers": { "fast": 0.75, "normal": 1, "relaxed": 1.5 },
+    "matchCapMs": 2700000
+  },
+  "operations": {
+    "tiers": {
+      "LOW": { "baseMin": 0.62, "baseMax": 0.82, "poolPerPlayer": 2 },
+      "MEDIUM": { "baseMin": 0.45, "baseMax": 0.65, "poolPerPlayer": 3 },
+      "HIGH": { "baseMin": 0.28, "baseMax": 0.48, "poolPerPlayer": 4.5 }
+    },
+    "publicWindow": 0.25,
+    "targetCapitalPerPlayer": 1.5,
+    "targetBonus": 0.1,
+    "shareCapPerCredit": 2.5,
+    "minSuccess": 0.05,
+    "maxSuccess": 0.95,
+    "names": [
+      "The Harbor Manifest",
+      "Velvet Ledger",
+      "Glasshouse Exchange",
+      "The Lantern Run",
+      "Midnight Auction",
+      "Copper Dragnet",
+      "The Orchid Vault",
+      "Silent Freight",
+      "The Cartographer's Debt",
+      "Neon Archive",
+      "Blackwater Shipment",
+      "The Gilded Cipher"
+    ],
+    "scenarios": [
+      {
+        "id": "quiet",
+        "name": "Quiet Streets",
+        "successDelta": 0,
+        "poolMultiplier": 1,
+        "targetMultiplier": 1,
+        "intelCostDelta": 0
+      },
+      {
+        "id": "patrols",
+        "name": "Heightened Patrols",
+        "successDelta": -0.08,
+        "poolMultiplier": 1.3,
+        "targetMultiplier": 1,
+        "intelCostDelta": 0
+      },
+      {
+        "id": "dockmaster",
+        "name": "Friendly Dockmaster",
+        "successDelta": 0.06,
+        "poolMultiplier": 0.9,
+        "targetMultiplier": 1,
+        "intelCostDelta": 0
+      },
+      {
+        "id": "frenzy",
+        "name": "Bidding Frenzy",
+        "successDelta": 0,
+        "poolMultiplier": 1.4,
+        "targetMultiplier": 1.3,
+        "intelCostDelta": 0
+      },
+      {
+        "id": "rivals",
+        "name": "Rival Crew Sighted",
+        "successDelta": -0.05,
+        "poolMultiplier": 1.1,
+        "targetMultiplier": 1,
+        "intelCostDelta": 0
+      },
+      {
+        "id": "loose-lips",
+        "name": "Loose Lips",
+        "successDelta": 0,
+        "poolMultiplier": 1,
+        "targetMultiplier": 1,
+        "intelCostDelta": -1
+      }
+    ]
+  },
+  "intel": { "basicNoise": 0.15, "extraNoise": 0.07, "extraCost": 1, "roundTo": 0.05 },
+  "chat": { "maxLength": 140, "maxPerMinute": 12, "historyLimit": 120 },
+  "deals": { "maxOpenPerPlayer": 3, "maxNoteLength": 80 }
+}

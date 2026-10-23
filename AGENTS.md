@@ -148,6 +148,14 @@ Harness (repository root):
 - pwsh -NoProfile -File scripts/cross-review-selftest.ps1
 - uv run --no-project --with pyyaml python scripts/validate_skills.py
 
+THE SYNDICATE (from the-syndicate/; every game folder exposes the same script names, which CI runs):
+- pnpm install --frozen-lockfile
+- pnpm run lint; pnpm run format:check; pnpm run typecheck
+- pnpm run test:coverage (engine coverage thresholds, then all unit tests)
+- pnpm run build; pnpm run sim:check (600 seeded bot matches; fails on any violation)
+- pnpm run test:integration (real wrangler dev); pnpm run test:e2e (Playwright)
+- pnpm dev (local play); pnpm run test:balance (10,000-match balance report)
+
 ## Boundaries and definition of done
 - The server is authoritative. Clients never decide role assignment, scoring, randomness,
   deadlines, phase transitions or secret information; every inbound command is schema-validated,

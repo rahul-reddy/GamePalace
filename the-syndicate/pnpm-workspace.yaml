@@ -1,0 +1,7 @@
+packages:
+  - apps/*
+  - packages/*
+# Dependency install scripts are blocked except for these, which download platform binaries.
+allowBuilds:
+  esbuild: true
+  workerd: true
