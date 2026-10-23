@@ -6,6 +6,7 @@ import { CommandError } from '../lib/connection';
 import { PHASE_LABEL } from '../lib/format';
 import { navigate } from '../lib/router';
 import { forgetSeat, loadSeat } from '../lib/session';
+import { play } from '../lib/sound';
 import { useRoom } from '../lib/useRoom';
 import { Briefing } from './Briefing';
 import { Final } from './Final';
@@ -55,6 +56,19 @@ export function RoomScreen({ code }: { code: string }) {
   // Announced to screen readers whenever the phase (or round) changes.
   const phase = room.view?.phase;
   const announcement = phase ? `${PHASE_LABEL[phase]} phase, round ${room.view?.round ?? 0}` : '';
+
+  // Sound cues (only when the player has turned sound on).
+  const outcome = room.view?.operation?.result?.status;
+  useEffect(() => {
+    if (!phase) return;
+    if (phase === 'RESOLUTION')
+      play(outcome === 'SUCCESS' ? 'success' : outcome === 'FAILURE' ? 'failure' : 'phase');
+    else play('phase');
+  }, [phase, outcome]);
+  const sealed = room.view?.self.committed !== null && room.view?.self.committed !== undefined;
+  useEffect(() => {
+    if (sealed) play('sealed');
+  }, [sealed]);
 
   if (!seat) return null;
   const status = room.status;

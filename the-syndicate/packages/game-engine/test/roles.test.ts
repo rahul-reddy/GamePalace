@@ -91,7 +91,8 @@ describe('role secrecy', () => {
       expect(view.self.role?.id).toBe(p.role);
       expect(view.self.objective?.id).toBe(p.objective);
       const others = state.players.filter((o) => o.id !== p.id);
-      const json = JSON.stringify(view);
+      // The public role catalog is the same for everyone; only per-player data matters here.
+      const json = JSON.stringify({ ...view, rules: { ...view.rules, roleCatalog: [] } });
       for (const o of others) {
         if (o.role !== p.role) expect(json).not.toContain(`"${o.role}"`);
       }
@@ -111,7 +112,8 @@ describe('role secrecy', () => {
     state = ok(state, ability('p2', { target: 'p3' }));
     state = allCommit(state, 2);
     for (const id of ['p3', 'p4']) {
-      const json = JSON.stringify(redactViewForPlayer(state, id));
+      const view = redactViewForPlayer(state, id);
+      const json = JSON.stringify({ ...view, rules: { ...view.rules, roleCatalog: [] } });
       expect(json).not.toContain('forecast');
       expect(json).not.toContain('"bonuses"');
     }

@@ -1,5 +1,8 @@
 import { Counter } from '@syndicate/ui';
+import { useState, useSyncExternalStore } from 'react';
 import { PHASE_HINT, PHASE_LABEL, useServerNow } from '../lib/format';
+import { onSoundChange, setSoundEnabled, soundEnabled } from '../lib/sound';
+import { HelpDialog } from './HelpDialog';
 import type { GameProps } from '../screens/Room';
 
 /** Always visible: phase, round, time left, and the viewer's resources. */
@@ -16,6 +19,8 @@ export function Header({
   const seconds = Math.ceil(left / 1000);
   const fraction = total > 0 ? left / total : 0;
   const inMatch = view.phase !== 'LOBBY' && view.phase !== 'RESULTS';
+  const [help, setHelp] = useState(false);
+  const sound = useSyncExternalStore(onSoundChange, soundEnabled);
   return (
     <header className="sticky top-0 z-30 bg-[rgba(10,15,30,0.92)] backdrop-blur border-b border-[var(--color-border)]">
       <div className="max-w-3xl mx-auto px-4 py-2.5 flex items-center gap-3">
@@ -74,9 +79,22 @@ export function Header({
           />
         </div>
       )}
-      <p className="max-w-3xl mx-auto px-4 py-1.5 text-xs text-[var(--color-muted)]">
-        {PHASE_HINT[view.phase]}
-      </p>
+      <div className="max-w-3xl mx-auto px-4 py-1 flex items-center gap-2">
+        <p className="flex-1 text-xs text-[var(--color-muted)]">{PHASE_HINT[view.phase]}</p>
+        <button type="button" className="btn btn-ghost btn-sm" onClick={() => setHelp(true)}>
+          Rules
+        </button>
+        <button
+          type="button"
+          className="btn btn-ghost btn-sm"
+          aria-pressed={sound}
+          aria-label={sound ? 'Sound on' : 'Sound off'}
+          onClick={() => setSoundEnabled(!sound)}
+        >
+          <span aria-hidden="true">{sound ? '🔊' : '🔇'}</span>
+        </button>
+      </div>
+      {help && <HelpDialog view={view} onClose={() => setHelp(false)} />}
     </header>
   );
 }

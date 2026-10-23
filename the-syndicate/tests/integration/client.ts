@@ -4,7 +4,8 @@ import type { Avatar, PlayerCommand, PlayerView } from '@syndicate/game-engine';
 import type { SeatResponse, ServerMessage } from '@syndicate/shared';
 
 export const BASE = process.env.SYNDICATE_BASE_URL ?? 'http://127.0.0.1:8791';
-const WS_BASE = BASE.replace(/^http/, 'ws');
+/** Read at call time so a test can point the client at a different server. */
+const base = () => process.env.SYNDICATE_BASE_URL ?? BASE;
 
 let commandCounter = 0;
 export function commandId(): string {
@@ -21,7 +22,7 @@ export async function api<T>(
   if (!headers.has('x-syndicate-test-client'))
     headers.set('x-syndicate-test-client', `t-${Math.random()}`);
   if (init.json !== undefined) headers.set('content-type', 'application/json');
-  const response = await fetch(`${BASE}${path}`, {
+  const response = await fetch(`${base()}${path}`, {
     ...init,
     headers,
     body: init.json !== undefined ? JSON.stringify(init.json) : init.body,
@@ -85,7 +86,7 @@ export class Client {
 
   async open(token = this.seat.token): Promise<void> {
     this.closed = null;
-    this.ws = new WebSocket(`${WS_BASE}/api/rooms/${this.seat.roomCode}/ws`);
+    this.ws = new WebSocket(`${base().replace(/^http/, 'ws')}/api/rooms/${this.seat.roomCode}/ws`);
     this.ws.onmessage = (event) => this.receive(JSON.parse(String(event.data)) as ServerMessage);
     this.ws.onclose = (event) => {
       this.closed = { code: event.code, reason: event.reason };
