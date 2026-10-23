@@ -84,6 +84,17 @@ export function HelpDialog({ view, onClose }: { view: PlayerView; onClose: () =>
                   failure they lose what they committed. Sitting out pays {r.sitOutCredits} credit.
                 </li>
               </ol>
+              <p>
+                <a
+                  href="/how-to-play"
+                  target="_blank"
+                  rel="noopener"
+                  className="text-[var(--color-teal)] underline"
+                >
+                  Open the full how-to-play guide
+                </a>{' '}
+                (new tab, your game stays open).
+              </p>
               <p className="text-[var(--color-muted)]">
                 Anything framed in teal is private to you. Gold is public. Phases end early once
                 everyone connected is done.

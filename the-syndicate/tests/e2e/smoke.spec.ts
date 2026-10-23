@@ -39,3 +39,32 @@ test('unknown and invalid room links lead somewhere useful @smoke', async ({ pag
   await page.goto('/nowhere');
   await expect(page.getByRole('button', { name: 'Host a game' })).toBeVisible();
 });
+
+test('the how-to-play guide opens from the homepage and works as a direct link @smoke', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'How to play' }).click();
+  await expect(page).toHaveURL(/\/how-to-play$/);
+  await expect(page.getByRole('heading', { name: 'How to play', level: 1 })).toBeVisible();
+  // Numbers come from the live rules config.
+  await expect(page.getByLabel('The goal')).toContainText('5 operations');
+  await expect(page.getByLabel('The goal')).toContainText('3 in a quick game');
+  const saboteur = page
+    .getByRole('listitem')
+    .filter({ has: page.getByRole('heading', { name: 'Saboteur' }) });
+  await saboteur.getByText('Exact powers').click();
+  await expect(saboteur).toContainText('Mole:');
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - window.innerWidth,
+  );
+  expect(overflow).toBeLessThanOrEqual(0);
+  await page.screenshot({ path: 'artifacts/screenshots/how-to-play.png', fullPage: true });
+  await page.getByRole('button', { name: '← Back' }).click();
+  await expect(page.getByRole('button', { name: 'Host a game' })).toBeVisible();
+  // A shared link opens the guide directly.
+  await page.goto('/how-to-play');
+  await expect(page.getByRole('heading', { name: 'Who wins' })).toBeVisible();
+  await page.goto('/how-to-play/');
+  await expect(page.getByRole('heading', { name: 'How to play', level: 1 })).toBeVisible();
+});

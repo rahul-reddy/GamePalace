@@ -29,6 +29,13 @@ export function Landing() {
         >
           Join with a code
         </button>
+        <button
+          className="btn btn-ghost btn-block"
+          type="button"
+          onClick={() => navigate('/how-to-play')}
+        >
+          How to play
+        </button>
       </div>
       <ul className="grid gap-3 sm:grid-cols-3 max-w-3xl w-full text-sm">
         {[
