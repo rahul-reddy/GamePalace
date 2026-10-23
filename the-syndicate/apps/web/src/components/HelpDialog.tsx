@@ -60,7 +60,11 @@ export function HelpDialog({ view, onClose }: { view: PlayerView; onClose: () =>
             </button>
           ))}
         </div>
-        <div role="tabpanel" tabIndex={0} className="overflow-y-auto p-4 text-sm flex flex-col gap-3">
+        <div
+          role="tabpanel"
+          tabIndex={0}
+          className="overflow-y-auto p-4 text-sm flex flex-col gap-3"
+        >
           {tab === 'play' && (
             <>
               <p>

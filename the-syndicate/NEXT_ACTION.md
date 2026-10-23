@@ -1,7 +1,7 @@
 # Next action
 
-Sprint 5-6 (polish and scale): guided first-round tutorial and role reference, optional muted-by-
-default sound, accessibility audit (axe) and 375/390/768/1280 px layout checks, then real 8- and
-12-player Playwright runs (`test:e2e:12p`) and a 12-player layout pass. After that, Sprint 7
-recovery tests (kill and restart workerd mid-match) and Sprint 8 load test, deploy script,
-runbook and cost model.
+Sprint 7 (security and recovery): a recovery test that kills and restarts the local runtime mid-
+match and checks every seat resumes with its state and deadline; reconnect after tab close on a
+different context via a private "continue on another device" link; then Sprint 8: load test
+(`pnpm test:load`, 100 rooms against local workerd with latency percentiles), deploy script with
+typed confirmation and SHA recording, runbook, cost model and release readiness report.

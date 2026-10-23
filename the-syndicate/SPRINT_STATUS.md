@@ -66,3 +66,15 @@ Tests and results:
 - E2E golden path with roles (every browser checks its secret role card, uses its ability through the UI in round 2, one public accusation, full reveal at the reckoning).
 Fixes made: stored rooms written before roles crashed the new code (state upgrade added); exposures scrolled out of the 80-entry log (permanent public flag); Kingmaker gift label leaked role mechanics (neutral "patron" label).
 Known defects and risk: balance is simulated, not human-tested (see `docs/BALANCE.md`); golden path needs relaxed pace on heavily loaded machines.
+
+## Sprints 5-6 (part 1) - Product polish and table scale
+Status: PASS (local) - CI pending on PR
+Implemented:
+- In-game Rules dialog (How to play / Roles / Scoring), generated from the room's rules; public role catalog in the rules summary (which player holds which role stays secret).
+- Optional sound effects, muted by default, synthesized with Web Audio (no audio files); toggle in the header, remembered per device.
+- Dialogs render in a portal to `<body>` (the sticky header's backdrop filter had trapped the Rules overlay off-screen; found by the accessibility test).
+Tests and results:
+- `tests/e2e/a11y.spec.ts`: axe-core WCAG 2.0/2.1 A and AA on landing, host, join, lobby, briefing, intelligence, negotiation, commitment, confirm dialog, outcome, rules dialog (both tabs) and final reckoning, desktop and phone: no serious or critical violations.
+- `tests/e2e/scale.spec.ts`: 8 and 12 isolated browsers (half phone-sized at 375 px) each play a quick match: distinct secret roles, identical outcomes and scoreboards everywhere, no horizontal scroll at 375 px, no console errors (8p 1.1 min, 12p 1.6 min).
+- Full local e2e suite: 11 passed.
+Known defects and risk: phone layouts at 12 players are long (scrolling) but complete; no human playtest yet.
