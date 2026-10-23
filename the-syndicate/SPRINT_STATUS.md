@@ -26,3 +26,16 @@ Fixes made: remainder tie-break by seat gave seat 1 a 38.7% win rate in matched 
 Known defects and risk:
 - "Always commit the maximum" (aggressive bot) outperforms in mixed tables (+9 pp over expectation in a 300-match sample). To be addressed with roles and payoff tuning in Sprint 4/6.
 - Tie rate is high in matched-strategy tables (identical bots); mixed-table tie rate to be reported separately in Sprint 6.
+
+## Sprint 2 - Authoritative live rooms
+Status: PASS (local) - CI pending on PR
+Implemented:
+- `RoomDirectory` DO (code -> unguessable room id, collision-checked, sharded), `Room` DO (SQLite state/seats/commands/events, alarms, hibernatable WebSockets), `RateLimiter` DO.
+- `POST /api/rooms`, `GET /api/rooms/:code`, `POST /api/rooms/:code/join`, `GET /api/rooms/:code/ws`; seat tokens (256-bit, SHA-256 stored, sent only in `hello`).
+- Protocol v1: acknowledgements, `commandId` idempotency, `expectedPhaseVersion` stale-phase guard, server sequence numbers, full redacted snapshot per state change, one live socket per seat (newest wins), presence, kick/leave revocation, expiry and cleanup.
+- Test-mode-only endpoints (`TEST_MODE=1`): phase fast-forward, replay log, aging for expiry tests, per-test rate-limit identity.
+- Docs: `docs/ARCHITECTURE.md`, `docs/PROTOCOL.md`.
+Tests and results (real `wrangler dev`, workerd, SQLite DOs):
+- `pnpm test:integration`: 33/33 (health 4, rooms 14, security 15). Covers a full 4-player match with consistent views and network-level secrecy checks, server replay reproducing the persisted state byte for byte, duplicate commandIds, 6 simultaneous commits resolving once, stale/late commands, same-seat reconnect replacing the old socket, disconnect/return, a real alarm deadline (fast pace), kick + token revocation, full/in-progress/unknown rooms, expiry, forged system commands, impersonation, over-commitment, double-spend races, origin checks, HTML nicknames, oversized/malformed input, create/join/socket rate limits, unauthenticated socket timeout, revoked tokens.
+Fixes made during the sprint: room storage tables recreated after `deleteAll()` (closed rooms crashed on late socket events); leaving the lobby now acknowledges before closing the socket; `MATCH_IN_PROGRESS` returns 409.
+Known defects and risk: restart/redeploy recovery is designed (lazy load from SQLite) but not yet tested by killing the runtime (Sprint 7). Rate-limit counters are in memory and reset if the limiter object is evicted.

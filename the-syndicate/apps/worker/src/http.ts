@@ -41,12 +41,12 @@ export function withSecurityHeaders(response: Response): Response {
  * non-browser clients without Origin are allowed because they cannot ride a
  * victim's session (seat tokens are never cookies).
  */
-export function isAllowedOrigin(request: Request, extra: string): boolean {
+export function isAllowedOrigin(request: Request, extra: string | undefined): boolean {
   const origin = request.headers.get('Origin');
   if (!origin) return true;
   const self = new URL(request.url).origin;
   if (origin === self) return true;
-  return extra
+  return (extra ?? '')
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean)
