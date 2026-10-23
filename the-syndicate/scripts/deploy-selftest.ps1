@@ -35,6 +35,23 @@ try {
     $content = Get-Content -Raw "$out/the-syndicate/apps/a.txt"
     if ($content -ne 'committed') { throw "Bundle carried a local edit: '$content'" }
     Write-Host 'Deploy bundle self-test passed.'
+
+    # .env loading: only requested keys, quotes stripped, existing environment wins.
+    . "$PSScriptRoot/lib/dotenv.ps1"
+    $envFile = Join-Path $out 'test.env'
+    Set-Content -Path $envFile -Value @('# comment', 'SELFTEST_A="alpha"', "SELFTEST_B='beta'", 'SELFTEST_C=gamma', 'SELFTEST_IGNORED=x', 'not a pair')
+    $env:SELFTEST_C = 'preset'
+    try {
+        $loaded = Import-DotEnvKeys -Path $envFile -Keys @('SELFTEST_A', 'SELFTEST_B', 'SELFTEST_C', 'SELFTEST_MISSING')
+        if (($loaded -join ',') -ne 'SELFTEST_A,SELFTEST_B,SELFTEST_C') { throw "loaded keys: $($loaded -join ',')" }
+        if ($env:SELFTEST_A -ne 'alpha' -or $env:SELFTEST_B -ne 'beta') { throw 'quotes not stripped' }
+        if ($env:SELFTEST_C -ne 'preset') { throw 'environment did not win over .env' }
+        if ($env:SELFTEST_IGNORED) { throw 'unrequested key was loaded' }
+    }
+    finally {
+        foreach ($k in 'SELFTEST_A', 'SELFTEST_B', 'SELFTEST_C') { [Environment]::SetEnvironmentVariable($k, $null) }
+    }
+    Write-Host '.env loader self-test passed.'
 }
 finally {
     Remove-Item -LiteralPath $repo -Recurse -Force -ErrorAction SilentlyContinue
