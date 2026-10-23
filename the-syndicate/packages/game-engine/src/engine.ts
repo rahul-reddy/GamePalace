@@ -31,6 +31,15 @@ import type {
 } from './types';
 import { AVATARS, TIERS } from './types';
 import { finalizeResults } from './score';
+import {
+  accuse,
+  applyResolutionAbilities,
+  assignRoles,
+  hasRoles,
+  sabotagePenalty,
+  summaryChecks,
+  useAbility,
+} from './roles';
 
 export const DEFAULT_SETTINGS: MatchSettings = {
   length: 'standard',
@@ -125,6 +134,8 @@ export function createGame(config: CreateGameConfig, seed: string): GameState {
     log: [],
     nextLogId: 1,
     results: null,
+    abilityUses: [],
+    accusations: [],
   };
   seatPlayer(state, config.hostId, name, config.hostAvatar, config.now);
   return state;
@@ -156,6 +167,11 @@ function seatPlayer(state: GameState, id: string, name: string, avatar: Avatar, 
     ready: false,
     muted: false,
     intel: [],
+    role: null,
+    objective: null,
+    charges: 0,
+    accusationsMade: 0,
+    accusedInRound: 0,
   });
   addLog(state, now, 'player_joined', { player: id });
 }
@@ -226,6 +242,9 @@ export function transitionPhase(state: GameState, now: number): void {
       break;
     case 'RESOLUTION':
       resolveOperation(state, now);
+      break;
+    case 'ROUND_SUMMARY':
+      summaryChecks(state, rulesOf(state), (kind, data, to) => addLog(state, now, kind, data, to));
       break;
     case 'FINAL_RECKONING':
       state.results = finalizeResults(state);
@@ -361,6 +380,8 @@ function startMatch(state: GameState, now: number, seed: string): void {
   state.extraIntel = {};
   state.deals = [];
   state.results = null;
+  state.abilityUses = [];
+  state.accusations = [];
   state.matchStartedAt = now;
   state.matchCapAt = now + rules.timing.matchCapMs;
   state.players.forEach((p, seat) => {
@@ -370,6 +391,7 @@ function startMatch(state: GameState, now: number, seed: string): void {
     p.suspicion = 0;
     p.intel = [];
   });
+  assignRoles(state, rules);
   addLog(state, now, 'match_started', { players: state.players.length, rounds: state.totalRounds });
   transitionPhase(state, now);
 }
@@ -427,13 +449,21 @@ export function splitPool(
   return out;
 }
 
-export function successChance(state: GameState, op: Operation, totalCommitted: number): number {
+export function successChance(
+  state: GameState,
+  op: Operation,
+  totalCommitted: number,
+  sabotage = 0,
+): number {
   const rules = rulesOf(state);
   const scenario = scenarioById(rules, op.scenarioId);
   const targetMet = totalCommitted >= op.targetCapital;
   return round2(
     clamp(
-      op.trueBase + scenario.successDelta + (targetMet ? rules.operations.targetBonus : 0),
+      op.trueBase +
+        scenario.successDelta +
+        (targetMet ? rules.operations.targetBonus : 0) -
+        sabotage,
       rules.operations.minSuccess,
       rules.operations.maxSuccess,
     ),
@@ -456,7 +486,8 @@ export function resolveOperation(state: GameState, now: number): void {
   const totalCommitted = entries.reduce((s, e) => s + e.amount, 0);
   const participants = entries.filter((e) => e.amount > 0).length;
   const targetMet = totalCommitted >= op.targetCapital;
-  const finalChance = successChance(state, op, totalCommitted);
+  const sabotage = sabotagePenalty(state, rules);
+  const finalChance = successChance(state, op, totalCommitted, sabotage);
   const status = participants === 0 ? 'ABANDONED' : op.roll < finalChance ? 'SUCCESS' : 'FAILURE';
   const shares =
     status === 'SUCCESS' ? splitPool(op.pool, entries, rules.operations.shareCapPerCredit) : {};
@@ -479,6 +510,7 @@ export function resolveOperation(state: GameState, now: number): void {
     payouts[p.id] = payout;
   }
   op.result = { status, totalCommitted, participants, targetMet, finalChance, payouts };
+  if (sabotage > 0) op.result.sabotage = sabotage;
   addLog(state, now, 'operation_resolved', {
     round: op.round,
     status,
@@ -486,26 +518,38 @@ export function resolveOperation(state: GameState, now: number): void {
     participants,
     targetMet,
   });
+  applyResolutionAbilities(state, rules, op.result, (kind, data, to) =>
+    addLog(state, now, kind, data, to),
+  );
   judgeDeals(state, now, commits);
 }
 
 function judgeDeals(state: GameState, now: number, commits: Record<string, number>): void {
   for (const deal of state.deals) {
     if (deal.round !== state.round || deal.kept) continue;
+    // Mechanically checkable terms: committing at least X, and not accusing a co-member.
     const commitTerm = deal.terms.find((t) => t.kind === 'commit');
-    if (!commitTerm || commitTerm.kind !== 'commit') continue;
+    const promised = commitTerm?.kind === 'commit' ? commitTerm.amount : 0;
+    const noAccuse = deal.terms.some((t) => t.kind === 'noAccuse');
+    if (!promised && !noAccuse) continue;
     const accepted = deal.members.filter((m) => deal.responses[m] === 'accepted');
     if (accepted.length < 2) continue;
     deal.kept = {};
     for (const m of accepted) {
-      const kept = (commits[m] ?? 0) >= commitTerm.amount;
+      const committedEnough = (commits[m] ?? 0) >= promised;
+      const accusedPartner =
+        noAccuse &&
+        state.accusations.some(
+          (a) => a.round === state.round && a.accuser === m && accepted.includes(a.target),
+        );
+      const kept = committedEnough && !accusedPartner;
       deal.kept[m] = kept;
       if (!kept) {
         addLog(
           state,
           now,
           'deal_broken',
-          { deal: deal.id, player: m, promised: commitTerm.amount },
+          { deal: deal.id, player: m, promised, accused: accusedPartner },
           accepted,
         );
       }
@@ -775,6 +819,27 @@ function applyPlayerCommand(state: GameState, env: CommandEnvelope): void {
       }
       return;
     }
+    case 'useAbility': {
+      if (!hasRoles(rules)) fail('NOT_ALLOWED_IN_PHASE', 'These rules have no roles.');
+      requirePhase(state, 'INTELLIGENCE', 'NEGOTIATION', 'COMMITMENT');
+      useAbility(
+        state,
+        rules,
+        me,
+        { target: command.target, choice: command.choice, targetRound: command.targetRound },
+        fail,
+        (kind, data, to) => addLog(state, now, kind, data, to),
+      );
+      return;
+    }
+    case 'accuse': {
+      if (!hasRoles(rules)) fail('NOT_ALLOWED_IN_PHASE', 'These rules have no accusations.');
+      requirePhase(state, 'NEGOTIATION');
+      accuse(state, rules, me, command.target, fail, (kind, data, to) =>
+        addLog(state, now, kind, data, to),
+      );
+      return;
+    }
     case 'rematch': {
       requireHost(state, actor);
       requirePhase(state, 'RESULTS');
@@ -802,6 +867,8 @@ function resetToLobby(state: GameState, now: number): void {
   state.extraIntel = {};
   state.deals = [];
   state.results = null;
+  state.abilityUses = [];
+  state.accusations = [];
   // A rematch keeps the rules version the room was created with.
   for (const p of state.players) {
     p.ready = false;
@@ -809,6 +876,11 @@ function resetToLobby(state: GameState, now: number): void {
     p.influence = 0;
     p.suspicion = 0;
     p.intel = [];
+    p.role = null;
+    p.objective = null;
+    p.charges = 0;
+    p.accusationsMade = 0;
+    p.accusedInRound = 0;
   }
   addLog(state, now, 'rematch', { match: state.matchIndex });
 }

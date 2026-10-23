@@ -14,6 +14,7 @@ import { botCommands, type StrategyName } from './strategies';
 
 export interface SimConfig {
   seed: string;
+  rulesVersion?: string;
   strategies: StrategyName[];
   settings?: Partial<MatchSettings>;
   /** Probability that a bot is disconnected for a whole phase (exercises auto-pass). */
@@ -35,6 +36,8 @@ export interface SimResult {
   forcedZero: number;
   decisions: number;
   phasesSeen: Phase[];
+  /** Role id per seat (null under rules without roles). */
+  roles: (string | null)[];
 }
 
 /** Runs one complete match between bots, driving simulated time through every phase. */
@@ -49,6 +52,7 @@ export function simulateMatch(config: SimConfig): SimResult {
       hostAvatar: 'fox',
       now,
       settings: config.settings ?? {},
+      ...(config.rulesVersion ? { rulesVersion: config.rulesVersion } : {}),
     },
     config.seed,
   );
@@ -159,5 +163,6 @@ export function simulateMatch(config: SimConfig): SimResult {
     forcedZero,
     decisions,
     phasesSeen,
+    roles: state.players.map((p) => p.role),
   };
 }

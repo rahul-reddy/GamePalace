@@ -72,6 +72,14 @@ export function PlayerStrip({
                   ? status
                   : `${p.influence} influence${status ? ` · ${status}` : ''}`}
               </span>
+              {view.features.roles && view.phase !== 'LOBBY' && (p.suspicion > 0 || p.exposed) && (
+                <span className="block text-xs" style={{ color: 'var(--color-danger)' }}>
+                  {p.exposed && <strong>EXPOSED · </strong>}
+                  <span aria-label={`suspicion ${p.suspicion}`}>
+                    suspicion {'▲'.repeat(p.suspicion)}
+                  </span>
+                </span>
+              )}
             </span>
             {done && (
               <span

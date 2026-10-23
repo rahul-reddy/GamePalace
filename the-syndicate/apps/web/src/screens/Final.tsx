@@ -1,8 +1,10 @@
-import type { Highlight } from '@syndicate/game-engine';
+import type { Highlight, PublicOperation } from '@syndicate/game-engine';
 import { Card, ConfirmDialog, PrivateLabel } from '@syndicate/ui';
 import { useState } from 'react';
 import { TierChip } from '../components/OperationCard';
 import { Avatar, nameOf, ReadyBar } from '../components/Players';
+import { RoleSigil } from '../components/RoleSigil';
+import { OBJECTIVE_NAME, ROLE_ARCHETYPE, ROLE_NAMES } from '../lib/roles';
 import { pct } from '../lib/format';
 import { navigate } from '../lib/router';
 import { forgetSeat } from '../lib/session';
@@ -16,6 +18,23 @@ const HIGHLIGHT_TEXT: Record<Highlight['kind'], (v: number) => string> = {
   loyal_partner: (v) => `most promises kept: ${v}`,
   cautious: (v) => `most cautious: sat out ${v} operation${v === 1 ? '' : 's'}`,
 };
+
+/** Explains the gap between true base and final chance (clamping to 5-95% aside). */
+function modifiers(o: PublicOperation, targetBonus: number): string {
+  const parts: string[] = [];
+  const pts = (x: number) => Math.round(x * 100);
+  if (o.scenario.successDelta)
+    parts.push(
+      `${o.scenario.successDelta > 0 ? '+' : '−'}${Math.abs(pts(o.scenario.successDelta))} ${o.scenario.name}`,
+    );
+  if (o.result?.targetMet) parts.push(`+${pts(targetBonus)} target met`);
+  if (o.result?.audit?.sabotage) parts.push(`−${pts(o.result.audit.sabotage)} sabotage`);
+  return parts.length ? ` ${parts.join(' ')}` : '';
+}
+
+function signed(v: number): string {
+  return v > 0 ? `+${v}` : v < 0 ? `−${-v}` : '0';
+}
 
 export function Final(props: GameProps) {
   const { view, act, roomCode } = props;
@@ -51,6 +70,7 @@ export function Final(props: GameProps) {
               <th className="py-1 font-semibold">Player</th>
               <th className="py-1 font-semibold text-right">Influence</th>
               <th className="py-1 font-semibold text-right">Credits</th>
+              {view.features.roles && <th className="py-1 font-semibold text-right">±</th>}
               <th className="py-1 font-semibold text-right">Total</th>
             </tr>
           </thead>
@@ -75,6 +95,14 @@ export function Final(props: GameProps) {
                   <td className="py-2 text-right font-mono whitespace-nowrap">
                     {results.finalCredits[s.playerId]} → {s.creditPoints}
                   </td>
+                  {view.features.roles && (
+                    <td
+                      className="py-2 text-right font-mono"
+                      title="Objective and accusation bonuses minus penalties"
+                    >
+                      {signed(s.objectiveBonus + s.accusationBonus - s.penalties)}
+                    </td>
+                  )}
                   <td
                     className="py-2 text-right font-mono text-[var(--color-gold)]"
                     data-testid="score-total"
@@ -91,6 +119,57 @@ export function Final(props: GameProps) {
           broken by influence, then credits; players still level share the win.
         </p>
       </Card>
+
+      {view.features.roles && results.reveals.length > 0 && (
+        <Card aria-label="Secret roles revealed" data-testid="role-reveal">
+          <h2 className="font-display text-lg mb-3">The masks come off</h2>
+          <ul className="grid gap-2 sm:grid-cols-2">
+            {results.reveals.map((r) => {
+              const p = view.players.find((x) => x.id === r.playerId);
+              const archetype = r.role ? ROLE_ARCHETYPE[r.role] : undefined;
+              const lines = [
+                r.objective &&
+                  `${OBJECTIVE_NAME[r.objective]}: ${r.objectiveMet ? 'completed ✓' : 'missed'}`,
+                r.accusationBonus > 0 && `correct accusations +${r.accusationBonus}`,
+                r.accusationPenalty > 0 && `wrong accusations −${r.accusationPenalty}`,
+                r.suspicionPenalty > 0 && `suspicion −${r.suspicionPenalty}`,
+                r.abilityPenalty > 0 && `ability costs −${r.abilityPenalty}`,
+              ].filter(Boolean);
+              return (
+                <li
+                  key={r.playerId}
+                  className="flex items-start gap-3 rounded-[var(--radius-sm)] bg-[var(--color-bg-2)] p-3 anim-rise"
+                >
+                  {archetype && <RoleSigil archetype={archetype} size={40} />}
+                  <div className="min-w-0">
+                    <p className="font-semibold flex items-center gap-1.5">
+                      {p && <Avatar player={p} size={20} />}
+                      <span className="truncate">{p?.name}</span>
+                    </p>
+                    <p className="font-display text-[var(--color-gold)]">
+                      {r.role ? ROLE_NAMES[r.role] : 'Operator'}
+                    </p>
+                    <p className="text-xs text-[var(--color-muted)]">{lines.join(' · ')}</p>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+          {results.abilityUses.some((u) => u.ability === 'sabotage') && (
+            <p className="text-sm mt-3">
+              Sabotage:{' '}
+              {results.abilityUses
+                .filter((u) => u.ability === 'sabotage')
+                .map(
+                  (u) =>
+                    `${nameOf(view, u.player)} hit op ${u.round}${u.exposed ? ' (exposed)' : ''}`,
+                )
+                .join('; ')}
+              .
+            </p>
+          )}
+        </Card>
+      )}
 
       {results.highlights.length > 0 && (
         <Card aria-label="Highlights">
@@ -123,7 +202,7 @@ export function Final(props: GameProps) {
                 <p className="text-[var(--color-muted)] mt-1">
                   {o.result.status === 'ABANDONED'
                     ? 'Nobody backed it.'
-                    : `True base ${pct(o.result.audit?.trueBase ?? 0)}, final chance ${pct(o.result.audit?.finalChance ?? 0)}, roll ${pct(o.result.audit?.roll ?? 0)}: ${o.result.status === 'SUCCESS' ? 'success' : 'failure'}. ${o.result.totalCommitted} credits committed.`}
+                    : `True base ${pct(o.result.audit?.trueBase ?? 0)}${modifiers(o, view.rules.targetBonus)} = final chance ${pct(o.result.audit?.finalChance ?? 0)}; roll ${pct(o.result.audit?.roll ?? 0)}: ${o.result.status === 'SUCCESS' ? 'success' : 'failure'}. ${o.result.totalCommitted} credits committed.`}
                 </p>
               )}
             </li>

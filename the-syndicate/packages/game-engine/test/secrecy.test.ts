@@ -1,6 +1,6 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { redactViewForPlayer, type GameState } from '../src';
+import { applyCommand, redactViewForPlayer, type GameState } from '../src';
 import { advanceTo, allCommit, cmd, expire, ok, started } from './helpers';
 
 /** Every key path in a JSON value, e.g. "players.0.name". */
@@ -130,6 +130,61 @@ describe('redactViewForPlayer', () => {
                 : expire(state);
           }
           for (const p of state.players) assertNoLeaks(state, p.id);
+        },
+      ),
+      { numRuns: 60 },
+    );
+  });
+});
+
+describe('role secrecy (rules 2.0.0, property)', () => {
+  it('never shows another player’s role, objective, charges or ability use before the reckoning', () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 4, max: 12 }),
+        fc.integer({ min: 0, max: 40 }),
+        fc.string(),
+        (n, steps, seed) => {
+          let state = started(n, `roles-${seed}`, {}, '2.0.0');
+          for (let i = 0; i < steps && state.phase !== 'RESULTS'; i++) {
+            if (state.phase === 'COMMITMENT') {
+              for (const p of state.players) {
+                const ability = {
+                  type: 'useAbility',
+                  target: state.players[(p.seat + 1) % n]?.id,
+                  choice: i % 2 ? 'SUCCESS' : 'FAILURE',
+                } as const;
+                const r = applyCommand(state, {
+                  actor: p.id,
+                  now: state.phaseStartedAt + 1,
+                  command: ability,
+                });
+                if (r.ok) state = r.state;
+              }
+              state = allCommit(state, (id) => (id.length + i) % 4);
+            } else state = expire(state);
+          }
+          const final = state.phase === 'FINAL_RECKONING' || state.phase === 'RESULTS';
+          for (const p of state.players) {
+            const view = redactViewForPlayer(state, p.id);
+            const paths = keyPaths(view);
+            expect(paths.filter((k) => /^players\.\d+\.(role|objective|charges)$/.test(k))).toEqual(
+              [],
+            );
+            if (!final) {
+              expect(view.results).toBeNull();
+              const json = JSON.stringify(view);
+              expect(json).not.toContain('"abilityUses"');
+              expect(json).not.toContain('"bonuses"');
+              // The viewer's own role card names its role and archetype; nothing else may
+              // name another player's role.
+              const own = new Set([view.self.role?.id, view.self.role?.archetype]);
+              for (const o of state.players) {
+                if (o.id !== p.id && !own.has(o.role ?? ''))
+                  expect(json).not.toContain(`"${o.role}"`);
+              }
+            }
+          }
         },
       ),
       { numRuns: 60 },

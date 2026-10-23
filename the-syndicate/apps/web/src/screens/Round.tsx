@@ -4,6 +4,7 @@ import { Chat } from '../components/Chat';
 import { Deals } from '../components/Deals';
 import { OperationCard } from '../components/OperationCard';
 import { PlayerStrip, ReadyBar } from '../components/Players';
+import { Accusations, AbilityPanel, Dossier, RoleCard } from '../components/RolePanels';
 import { pct } from '../lib/format';
 import type { GameProps } from './Room';
 
@@ -186,8 +187,11 @@ export function Round(props: GameProps) {
             capPerCredit={view.rules.shareCapPerCredit}
           />
           <IntelPanel {...props} />
+          <AbilityPanel {...props} />
+          <Dossier view={view} />
           <Table view={view} />
           <Deals {...props} />
+          <RoleCard view={view} compact />
           <ReadyBar view={view} act={act} label="Done studying" />
         </>
       )}
@@ -207,8 +211,12 @@ export function Round(props: GameProps) {
           />
           <IntelPanel {...props} />
           <Chat {...props} />
+          <AbilityPanel {...props} />
+          <Accusations {...props} />
           <Table view={view} />
           <Deals {...props} />
+          <Dossier view={view} />
+          <RoleCard view={view} compact />
           <ReadyBar view={view} act={act} label="Done negotiating" />
         </>
       )}
@@ -219,6 +227,17 @@ export function Round(props: GameProps) {
               Pick an amount and seal it. If you run out of time you commit 0 automatically.
             </Tip>
           )}
+          {view.self.role &&
+            view.self.committed === null &&
+            !view.self.abilityUsedThisRound &&
+            view.self.role.charges > 0 &&
+            view.self.role.ability !== 'peek' &&
+            view.self.role.ability !== 'investigate' && (
+              <p className="text-sm text-[var(--color-teal)]">
+                Use your ability before you seal: sealing ends your turn.
+              </p>
+            )}
+          <AbilityPanel {...props} />
           <CommitPanel {...props} />
           <OperationCard
             op={op}

@@ -1,0 +1,423 @@
+{
+  "version": "2.0.0",
+  "players": {
+    "min": 4,
+    "max": 12
+  },
+  "economy": {
+    "startingCredits": 10,
+    "creditCap": 30,
+    "maxCommit": 3,
+    "sitOutCredits": 1,
+    "creditsPerScorePoint": 3
+  },
+  "rounds": {
+    "standard": 5,
+    "quick": 3
+  },
+  "timing": {
+    "phaseMs": {
+      "ROLE_REVEAL": 30000,
+      "INTELLIGENCE": 35000,
+      "NEGOTIATION": 75000,
+      "COMMITMENT": 25000,
+      "RESOLUTION": 15000,
+      "ROUND_SUMMARY": 15000,
+      "FINAL_RECKONING": 40000
+    },
+    "paceMultipliers": {
+      "fast": 0.75,
+      "normal": 1,
+      "relaxed": 1.5
+    },
+    "matchCapMs": 2700000
+  },
+  "operations": {
+    "tiers": {
+      "LOW": {
+        "baseMin": 0.62,
+        "baseMax": 0.82,
+        "poolPerPlayer": 1.4
+      },
+      "MEDIUM": {
+        "baseMin": 0.45,
+        "baseMax": 0.65,
+        "poolPerPlayer": 2
+      },
+      "HIGH": {
+        "baseMin": 0.28,
+        "baseMax": 0.48,
+        "poolPerPlayer": 3
+      }
+    },
+    "publicWindow": 0.25,
+    "targetCapitalPerPlayer": 1.5,
+    "targetBonus": 0.1,
+    "shareCapPerCredit": 2,
+    "minSuccess": 0.05,
+    "maxSuccess": 0.95,
+    "names": [
+      "The Harbor Manifest",
+      "Velvet Ledger",
+      "Glasshouse Exchange",
+      "The Lantern Run",
+      "Midnight Auction",
+      "Copper Dragnet",
+      "The Orchid Vault",
+      "Silent Freight",
+      "The Cartographer's Debt",
+      "Neon Archive",
+      "Blackwater Shipment",
+      "The Gilded Cipher"
+    ],
+    "scenarios": [
+      {
+        "id": "quiet",
+        "name": "Quiet Streets",
+        "successDelta": 0,
+        "poolMultiplier": 1,
+        "targetMultiplier": 1,
+        "intelCostDelta": 0
+      },
+      {
+        "id": "patrols",
+        "name": "Heightened Patrols",
+        "successDelta": -0.08,
+        "poolMultiplier": 1.3,
+        "targetMultiplier": 1,
+        "intelCostDelta": 0
+      },
+      {
+        "id": "dockmaster",
+        "name": "Friendly Dockmaster",
+        "successDelta": 0.06,
+        "poolMultiplier": 0.9,
+        "targetMultiplier": 1,
+        "intelCostDelta": 0
+      },
+      {
+        "id": "frenzy",
+        "name": "Bidding Frenzy",
+        "successDelta": 0,
+        "poolMultiplier": 1.4,
+        "targetMultiplier": 1.3,
+        "intelCostDelta": 0
+      },
+      {
+        "id": "rivals",
+        "name": "Rival Crew Sighted",
+        "successDelta": -0.05,
+        "poolMultiplier": 1.1,
+        "targetMultiplier": 1,
+        "intelCostDelta": 0
+      },
+      {
+        "id": "loose-lips",
+        "name": "Loose Lips",
+        "successDelta": 0,
+        "poolMultiplier": 1,
+        "targetMultiplier": 1,
+        "intelCostDelta": -1
+      }
+    ]
+  },
+  "intel": {
+    "basicNoise": 0.15,
+    "extraNoise": 0.07,
+    "extraCost": 1,
+    "roundTo": 0.05
+  },
+  "chat": {
+    "maxLength": 140,
+    "maxPerMinute": 12,
+    "historyLimit": 120
+  },
+  "deals": {
+    "maxOpenPerPlayer": 3,
+    "maxNoteLength": 80
+  },
+  "roles": {
+    "definitions": {
+      "broker": {
+        "archetype": "broker",
+        "name": "Broker",
+        "ability": "broker",
+        "charges": 1,
+        "params": {
+          "bonus": 3,
+          "minOthers": 2,
+          "othersBonus": 0
+        }
+      },
+      "kingmaker": {
+        "archetype": "broker",
+        "name": "Kingmaker",
+        "ability": "broker",
+        "charges": 2,
+        "params": {
+          "bonus": 3,
+          "minOthers": 3,
+          "othersBonus": 1
+        }
+      },
+      "insider": {
+        "archetype": "insider",
+        "name": "Insider",
+        "ability": "peek",
+        "charges": 2,
+        "params": {
+          "noiseNext": 0.05,
+          "noiseCurrent": 0.05,
+          "allowCurrent": 1,
+          "allowNext": 1,
+          "tipBonus": 2
+        }
+      },
+      "informant": {
+        "archetype": "insider",
+        "name": "Informant",
+        "ability": "peek",
+        "charges": 2,
+        "params": {
+          "noiseNext": 0.075,
+          "noiseCurrent": 0.075,
+          "allowCurrent": 1,
+          "allowNext": 0,
+          "tipBonus": 2
+        }
+      },
+      "fixer": {
+        "archetype": "fixer",
+        "name": "Fixer",
+        "ability": "insure",
+        "charges": 2,
+        "params": {
+          "refundShare": 1,
+          "allowSelf": 1,
+          "premium": 2
+        }
+      },
+      "underwriter": {
+        "archetype": "fixer",
+        "name": "Underwriter",
+        "ability": "insure",
+        "charges": 2,
+        "params": {
+          "refundShare": 0.5,
+          "allowSelf": 0,
+          "premium": 2
+        }
+      },
+      "auditor": {
+        "archetype": "auditor",
+        "name": "Auditor",
+        "ability": "investigate",
+        "charges": 2,
+        "params": {
+          "signal": "sabotage",
+          "accuseBonus": 2,
+          "scope": "history"
+        }
+      },
+      "inspector": {
+        "archetype": "auditor",
+        "name": "Inspector",
+        "ability": "investigate",
+        "charges": 3,
+        "params": {
+          "signal": "covert",
+          "accuseBonus": 2,
+          "scope": "round"
+        }
+      },
+      "saboteur": {
+        "archetype": "saboteur",
+        "name": "Saboteur",
+        "ability": "sabotage",
+        "charges": 1,
+        "params": {
+          "penalty": 0.2,
+          "reward": 3,
+          "minVictims": 2,
+          "exposeBase": 0.2,
+          "exposeStep": 0.15,
+          "exposureFine": 2
+        }
+      },
+      "mole": {
+        "archetype": "saboteur",
+        "name": "Mole",
+        "ability": "sabotage",
+        "charges": 2,
+        "params": {
+          "penalty": 0.12,
+          "reward": 2,
+          "minVictims": 2,
+          "exposeBase": 0.15,
+          "exposeStep": 0.1,
+          "exposureFine": 1
+        }
+      },
+      "opportunist": {
+        "archetype": "opportunist",
+        "name": "Opportunist",
+        "ability": "forecast",
+        "charges": 2,
+        "params": {
+          "reward": 2,
+          "wrongPenalty": 1
+        }
+      },
+      "speculator": {
+        "archetype": "opportunist",
+        "name": "Speculator",
+        "ability": "forecast",
+        "charges": 3,
+        "params": {
+          "reward": 1,
+          "wrongPenalty": 0
+        }
+      }
+    },
+    "distribution": {
+      "4": {
+        "fixed": ["saboteur", "auditor"],
+        "pick": 2,
+        "from": ["broker", "insider", "fixer", "opportunist"]
+      },
+      "5": {
+        "fixed": ["saboteur", "auditor"],
+        "pick": 3,
+        "from": ["broker", "insider", "fixer", "opportunist"]
+      },
+      "6": {
+        "fixed": ["saboteur", "auditor", "broker", "insider", "fixer", "opportunist"],
+        "pick": 0,
+        "from": []
+      },
+      "7": {
+        "fixed": ["saboteur", "auditor", "broker", "insider", "fixer", "opportunist"],
+        "pick": 1,
+        "from": ["kingmaker", "informant", "underwriter", "speculator"]
+      },
+      "8": {
+        "fixed": ["saboteur", "auditor", "broker", "insider", "fixer", "opportunist"],
+        "pick": 2,
+        "from": ["kingmaker", "informant", "underwriter", "speculator"]
+      },
+      "9": {
+        "fixed": ["saboteur", "mole", "auditor", "broker", "insider", "fixer", "opportunist"],
+        "pick": 2,
+        "from": ["kingmaker", "informant", "underwriter", "speculator"]
+      },
+      "10": {
+        "fixed": [
+          "saboteur",
+          "mole",
+          "auditor",
+          "inspector",
+          "broker",
+          "insider",
+          "fixer",
+          "opportunist"
+        ],
+        "pick": 2,
+        "from": ["kingmaker", "informant", "underwriter", "speculator"]
+      },
+      "11": {
+        "fixed": [
+          "saboteur",
+          "mole",
+          "auditor",
+          "inspector",
+          "broker",
+          "insider",
+          "fixer",
+          "opportunist"
+        ],
+        "pick": 3,
+        "from": ["kingmaker", "informant", "underwriter", "speculator"]
+      },
+      "12": {
+        "fixed": [
+          "saboteur",
+          "mole",
+          "auditor",
+          "inspector",
+          "broker",
+          "insider",
+          "fixer",
+          "opportunist"
+        ],
+        "pick": 4,
+        "from": ["kingmaker", "informant", "underwriter", "speculator"]
+      }
+    },
+    "maxSabotagePerOperation": 0.3
+  },
+  "suspicion": {
+    "max": 6,
+    "freeAllowance": 2,
+    "maxPenalty": 3,
+    "accusationRaise": 1,
+    "maxAccusationRaisePerRound": 1,
+    "exposureRaise": 2,
+    "decayOnSuccess": 1
+  },
+  "accusations": {
+    "perMatch": 2,
+    "perRound": 1,
+    "correctBonus": 2,
+    "wrongPenalty": 1
+  },
+  "objectives": [
+    {
+      "id": "backer",
+      "bonus": 3,
+      "standard": 4,
+      "quick": 3
+    },
+    {
+      "id": "highRoller",
+      "bonus": 3,
+      "standard": 1,
+      "quick": 1
+    },
+    {
+      "id": "reserve",
+      "bonus": 2,
+      "standard": 9,
+      "quick": 8
+    },
+    {
+      "id": "dealmaker",
+      "bonus": 2,
+      "standard": 3,
+      "quick": 2
+    },
+    {
+      "id": "cleanHands",
+      "bonus": 1,
+      "standard": 0,
+      "quick": 0
+    },
+    {
+      "id": "promiseKeeper",
+      "bonus": 3,
+      "standard": 2,
+      "quick": 1
+    },
+    {
+      "id": "contrarian",
+      "bonus": 2,
+      "standard": 1,
+      "quick": 1
+    },
+    {
+      "id": "investor",
+      "bonus": 3,
+      "standard": 6,
+      "quick": 4
+    }
+  ]
+}

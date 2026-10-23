@@ -1,6 +1,7 @@
 import { Card, PrivateLabel } from '@syndicate/ui';
 import { termText } from '../components/Deals';
 import { Avatar, nameOf, ReadyBar } from '../components/Players';
+import { Dossier } from '../components/RolePanels';
 import type { GameProps } from './Room';
 
 const STATUS_TEXT = { SUCCESS: 'Success', FAILURE: 'Failed', ABANDONED: 'Abandoned' } as const;
@@ -105,6 +106,8 @@ export function Outcome(props: GameProps) {
           </p>
         </Card>
       )}
+
+      <Dossier view={view} />
 
       {myDeals.length > 0 && (
         <Card aria-label="Promises">
