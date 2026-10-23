@@ -26,6 +26,9 @@ test('landing and entry screens have no serious accessibility violations', async
   await audit(page, 'host');
   await page.goto('/join');
   await audit(page, 'join');
+  await page.goto('/how-to-play');
+  await page.getByText('Exact powers').first().click();
+  await audit(page, 'how to play');
 });
 
 test('every in-match screen has no serious accessibility violations', async ({ page }, info) => {
