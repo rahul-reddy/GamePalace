@@ -172,6 +172,15 @@ importers:
       '@playwright/test':
         specifier: 1.64.0
         version: 1.64.0
+      '@syndicate/game-engine':
+        specifier: workspace:*
+        version: link:packages/game-engine
+      '@syndicate/shared':
+        specifier: workspace:*
+        version: link:packages/shared
+      '@syndicate/test-bots':
+        specifier: workspace:*
+        version: link:packages/test-bots
       '@types/node':
         specifier: 25.9.9
         version: 25.9.9
