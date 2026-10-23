@@ -57,7 +57,7 @@ export function Counter({
 
 /**
  * Dialog focus handling: focus `initial` when the dialog opens, close on Escape,
- * and return focus to the previous element when it closes. The latest `onDismiss`
+ * keep Tab inside the dialog, and return focus to the previous element when it closes. The latest `onDismiss`
  * is read through a ref, so a parent re-rendering (a ticking countdown, a new state
  * message) never re-runs the effect and never steals focus from the user.
  */
@@ -75,7 +75,30 @@ export function useDialogFocus(
     const previous = document.activeElement as HTMLElement | null;
     initial.current?.focus();
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') dismiss.current();
+      if (e.key === 'Escape') {
+        dismiss.current();
+        return;
+      }
+      if (e.key !== 'Tab') return;
+      // Keep Tab and Shift+Tab inside the dialog while it is open.
+      const dialog = initial.current?.closest('[role="dialog"]');
+      if (!dialog) return;
+      const focusable = Array.from(
+        dialog.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), [href], input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])',
+        ),
+      );
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (!first || !last) return;
+      const active = document.activeElement;
+      if (e.shiftKey && (active === first || !dialog.contains(active))) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && (active === last || !dialog.contains(active))) {
+        e.preventDefault();
+        first.focus();
+      }
     };
     document.addEventListener('keydown', onKey);
     return () => {

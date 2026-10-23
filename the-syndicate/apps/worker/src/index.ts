@@ -110,6 +110,7 @@ async function route(request: Request, env: Env): Promise<Response> {
       service: 'the-syndicate',
       protocol: PROTOCOL_VERSION,
       rules: CURRENT_RULES_VERSION,
+      revision: env.REVISION || 'dev',
       time: Date.now(),
     };
     return json(body);

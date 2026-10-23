@@ -5,7 +5,7 @@ import { Toasts, type Toast } from '../components/Toasts';
 import { CommandError } from '../lib/connection';
 import { PHASE_LABEL } from '../lib/format';
 import { navigate } from '../lib/router';
-import { forgetSeat, loadSeat } from '../lib/session';
+import { acceptTransferredSeat, forgetSeat, loadSeat } from '../lib/session';
 import { play } from '../lib/sound';
 import { useRoom } from '../lib/useRoom';
 import { Briefing } from './Briefing';
@@ -26,6 +26,7 @@ export interface GameProps {
 }
 
 export function RoomScreen({ code }: { code: string }) {
+  acceptTransferredSeat(code);
   const seat = loadSeat(code);
   useEffect(() => {
     if (!seat) navigate(`/join/${code}`, true);

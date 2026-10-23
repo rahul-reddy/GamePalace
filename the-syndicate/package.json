@@ -17,6 +17,7 @@
     "test:coverage": "pnpm --filter @syndicate/game-engine exec vitest run --coverage && vitest run",
     "build": "pnpm -r run build",
     "test:integration": "vitest run --config tests/integration/vitest.config.ts",
+    "test:recovery": "vitest run --config tests/recovery/vitest.config.ts",
     "test:security": "vitest run --config tests/integration/vitest.config.ts tests/security",
     "test:e2e": "playwright test",
     "test:e2e:4p": "playwright test --grep @4p",

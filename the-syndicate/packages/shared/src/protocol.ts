@@ -161,6 +161,8 @@ export interface HealthResponse {
   service: 'the-syndicate';
   protocol: number;
   rules: string;
+  /** Deployed commit SHA ("dev" when running locally). */
+  revision: string;
   time: number;
 }
 

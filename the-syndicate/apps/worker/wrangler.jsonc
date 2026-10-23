@@ -24,6 +24,8 @@
     "ALLOWED_ORIGINS": "",
     // "1" exposes test-only endpoints (phase fast-forward, replay log). Never set in production.
     "TEST_MODE": "0",
+    // Overridden by scripts/deploy.ps1 with the deployed commit SHA.
+    "REVISION": "dev",
   },
   "env": {
     // Bindings and vars are not inherited by environments, so staging repeats them.
@@ -36,7 +38,7 @@
           { "name": "LIMITER", "class_name": "RateLimiter" },
         ],
       },
-      "vars": { "ALLOWED_ORIGINS": "", "TEST_MODE": "0" },
+      "vars": { "ALLOWED_ORIGINS": "", "TEST_MODE": "0", "REVISION": "dev" },
     },
   },
 }

@@ -73,3 +73,47 @@ export function loadSoundEnabled(): boolean {
 export function saveSoundEnabled(on: boolean): void {
   write(SOUND_KEY, on ? 'on' : 'off');
 }
+
+// ---- Moving a seat to another device ----------------------------------------
+
+function encode(seat: StoredSeat): string {
+  return btoa(unescape(encodeURIComponent(JSON.stringify(seat))))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+}
+
+function decode(text: string): StoredSeat | null {
+  try {
+    const b64 = text.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = b64 + '='.repeat((4 - (b64.length % 4)) % 4);
+    const json = decodeURIComponent(escape(atob(padded)));
+    const seat = JSON.parse(json) as StoredSeat;
+    const ok =
+      typeof seat.roomCode === 'string' &&
+      typeof seat.playerId === 'string' &&
+      typeof seat.token === 'string' &&
+      typeof seat.name === 'string';
+    return ok ? seat : null;
+  } catch {
+    return null;
+  }
+}
+
+/** A private link that opens this seat elsewhere; the seat rides in the URL fragment. */
+export function transferLink(roomCode: string): string | null {
+  const seat = loadSeat(roomCode);
+  return seat ? `${location.origin}/room/${seat.roomCode}#seat=${encode(seat)}` : null;
+}
+
+/**
+ * Stores a seat arriving in the URL fragment and removes it from the address bar
+ * (and history) before anything else can read or share it.
+ */
+export function acceptTransferredSeat(roomCode: string): void {
+  const match = /^#seat=([A-Za-z0-9_-]+)$/.exec(location.hash);
+  if (!match) return;
+  history.replaceState(null, '', location.pathname);
+  const seat = decode(match[1] as string);
+  if (seat && seat.roomCode.toUpperCase() === roomCode.toUpperCase()) saveSeat(seat);
+}

@@ -100,8 +100,10 @@ jobs:
               pnpm run test:coverage
               pnpm run build
               pnpm run sim:check
+              if [ -f scripts/deploy-selftest.ps1 ]; then pwsh -NoProfile -File scripts/deploy-selftest.ps1; fi
               pnpm exec playwright install --with-deps chromium
               pnpm run test:integration
+              pnpm run test:recovery
               pnpm run test:e2e
             )
             echo "::endgroup::"
