@@ -85,7 +85,9 @@ function encode(seat: StoredSeat): string {
 
 function decode(text: string): StoredSeat | null {
   try {
-    const json = decodeURIComponent(escape(atob(text.replace(/-/g, '+').replace(/_/g, '/'))));
+    const b64 = text.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = b64 + '='.repeat((4 - (b64.length % 4)) % 4);
+    const json = decodeURIComponent(escape(atob(padded)));
     const seat = JSON.parse(json) as StoredSeat;
     const ok =
       typeof seat.roomCode === 'string' &&

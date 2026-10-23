@@ -191,3 +191,28 @@ describe('role secrecy (rules 2.0.0, property)', () => {
     );
   });
 });
+
+describe('deal redaction across rounds', () => {
+  it('shows a deal to its members in its round and the next, then drops it; never to others', () => {
+    let state = advanceTo(started(4), 'NEGOTIATION');
+    state = ok(
+      state,
+      cmd('p1', { type: 'proposeDeal', invitees: ['p2'], terms: [{ kind: 'noAccuse' }], note: '' }),
+    );
+    const dealId = state.deals[0]?.id;
+    const visible = (id: string) => redactViewForPlayer(state, id).deals.map((d) => d.id);
+    // Round 1: members see it, outsiders never do.
+    expect(visible('p1')).toEqual([dealId]);
+    expect(visible('p2')).toEqual([dealId]);
+    expect(visible('p3')).toEqual([]);
+    // Round 2: still shown (previous round).
+    while (!(state.phase === 'NEGOTIATION' && state.round === 2)) state = expire(state);
+    expect(visible('p1')).toEqual([dealId]);
+    expect(visible('p3')).toEqual([]);
+    // Round 3: settled and no longer sent, though the server keeps it for scoring.
+    while (!(state.phase === 'NEGOTIATION' && state.round === 3)) state = expire(state);
+    expect(visible('p1')).toEqual([]);
+    expect(visible('p2')).toEqual([]);
+    expect(state.deals.map((d) => d.id)).toEqual([dealId]);
+  });
+});
