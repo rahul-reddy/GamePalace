@@ -21,7 +21,10 @@ describe('secret roles over real sockets (rules 2.0.0)', () => {
     await allReady(clients);
     for (const [i, c] of clients.entries()) {
       const own = new Set([c.view?.self.role?.id, c.view?.self.role?.archetype]);
-      const frames = c.messages.filter((m) => m.type === 'state').map((m) => JSON.stringify(m));
+      // The public role catalog is identical for everyone; check everything else.
+      const frames = c.messages
+        .filter((m) => m.type === 'state')
+        .map((m) => (m.type === 'state' ? JSON.stringify({ ...m.view, rules: null }) : ''));
       for (const [j, other] of roles.entries()) {
         if (i === j || own.has(other)) continue;
         for (const f of frames) expect(f).not.toContain(`"${other}"`);

@@ -173,7 +173,7 @@ describe('role secrecy (rules 2.0.0, property)', () => {
             );
             if (!final) {
               expect(view.results).toBeNull();
-              const json = JSON.stringify(view);
+              const json = JSON.stringify({ ...view, rules: { ...view.rules, roleCatalog: [] } });
               expect(json).not.toContain('"abilityUses"');
               expect(json).not.toContain('"bonuses"');
               // The viewer's own role card names its role and archetype; nothing else may

@@ -20,12 +20,15 @@
     "test:security": "vitest run --config tests/integration/vitest.config.ts tests/security",
     "test:e2e": "playwright test",
     "test:e2e:4p": "playwright test --grep @4p",
+    "test:e2e:8p": "playwright test --grep @8p",
     "test:e2e:12p": "playwright test --grep @12p",
+    "test:a11y": "playwright test tests/e2e/a11y.spec.ts",
     "test:balance": "tsx packages/test-bots/src/cli.ts --matches 10000 --report reports/balance",
     "sim:check": "tsx packages/test-bots/src/cli.ts --matches 600 --check",
     "test:load": "tsx scripts/load-test.ts"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
     "@eslint/js": "9.39.5",
     "@playwright/test": "1.64.0",
     "@syndicate/game-engine": "workspace:*",

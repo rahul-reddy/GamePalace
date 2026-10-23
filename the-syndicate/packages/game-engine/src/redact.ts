@@ -134,6 +134,8 @@ export interface RulesSummary {
   shareCapPerCredit: number;
   roundsStandard: number;
   roundsQuick: number;
+  /** Public role definitions for the in-game reference (who holds which stays secret). */
+  roleCatalog: Omit<RoleView, 'charges'>[];
 }
 
 export interface PlayerView {
@@ -309,6 +311,14 @@ export function redactViewForPlayer(state: GameState, playerId: string): PlayerV
       shareCapPerCredit: rules.operations.shareCapPerCredit,
       roundsStandard: rules.rounds.standard,
       roundsQuick: rules.rounds.quick,
+      roleCatalog: Object.entries(rules.roles?.definitions ?? {}).map(([id, d]) => ({
+        id,
+        name: d.name,
+        archetype: d.archetype,
+        ability: d.ability,
+        maxCharges: d.charges,
+        params: { ...d.params },
+      })),
     },
     matchIndex: state.matchIndex,
     phase: state.phase,
