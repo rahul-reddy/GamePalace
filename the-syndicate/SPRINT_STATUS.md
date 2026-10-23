@@ -78,3 +78,14 @@ Tests and results:
 - `tests/e2e/scale.spec.ts`: 8 and 12 isolated browsers (half phone-sized at 375 px) each play a quick match: distinct secret roles, identical outcomes and scoreboards everywhere, no horizontal scroll at 375 px, no console errors (8p 1.1 min, 12p 1.6 min).
 - Full local e2e suite: 11 passed.
 Known defects and risk: phone layouts at 12 players are long (scrolling) but complete; no human playtest yet.
+
+## Sprints 7-8 - Recovery, load, operations
+Status: PASS (local) except items marked BLOCKED in docs/RELEASE_READINESS.md
+Implemented:
+- `pnpm test:recovery`: kills the local runtime mid-match, restarts it on the same storage; the persisted alarm advances the phase with nobody connected; all seats resume with identical role, objective, credits and intel; the match continues. In CI.
+- "Use on another device": private seat link in the URL fragment (never sent to servers), stripped on arrival; old device told its seat moved. `tests/e2e/device.spec.ts`.
+- `pnpm test:load`: 100 rooms / 796 players over real sockets: 0 failed rooms, 0 rejected commands; ack p95 119 ms uncontended, 1.66 s with 25 rooms sharing one local process (`docs/load/`). Player views trimmed 25% (older deals).
+- `scripts/deploy.ps1` (merged commits only, typed confirmation, budget acknowledgement, `REVISION` at `/api/health`, rollback by SHA) and `scripts/deploy-selftest.ps1` (bundle equals the commit despite local edits and untracked files; in CI). `E2E_BASE_URL` to run browser suites against a deployment.
+- Docs: `docs/OPERATIONS.md` (runbook, monitoring, incidents, rollback, cost model from 2026-10 Cloudflare pricing), `docs/SECURITY.md`, `docs/KNOWN_ISSUES.md`, `docs/RELEASE_READINESS.md`, README rewritten.
+Fixes made: integration suite now starts from an empty store; orphaned dev servers no longer survive the load test.
+Known defects and risk: deployment, human playtests and production latency are BLOCKED (see readiness report).

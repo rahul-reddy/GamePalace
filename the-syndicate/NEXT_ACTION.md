@@ -1,7 +1,6 @@
 # Next action
 
-Sprint 7 (security and recovery): a recovery test that kills and restarts the local runtime mid-
-match and checks every seat resumes with its state and deadline; reconnect after tab close on a
-different context via a private "continue on another device" link; then Sprint 8: load test
-(`pnpm test:load`, 100 rooms against local workerd with latency percentiles), deploy script with
-typed confirmation and SHA recording, runbook, cost model and release readiness report.
+Owner: log in to Cloudflare (`pnpm --filter @syndicate/worker exec wrangler login`) and approve a
+staging deploy. Then: deploy `main` to staging with `scripts/deploy.ps1`, run
+`E2E_BASE_URL=https://<staging-host> pnpm test:e2e`, play three human matches (4, 8, 12 players)
+and record findings, measure latency on a dedicated load environment, then production.

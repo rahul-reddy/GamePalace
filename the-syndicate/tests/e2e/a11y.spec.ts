@@ -77,6 +77,13 @@ test('every in-match screen has no serious accessibility violations', async ({ p
   await page.getByRole('tab', { name: 'Roles' }).click();
   await expect(page.getByRole('tabpanel')).toContainText('Saboteur');
   await audit(page, 'Rules dialog: roles');
+  // Tab never leaves the open dialog.
+  for (let i = 0; i < 12; i++) {
+    await page.keyboard.press('Tab');
+    expect(
+      await page.evaluate(() => Boolean(document.activeElement?.closest('[role="dialog"]'))),
+    ).toBe(true);
+  }
   await page.keyboard.press('Escape');
   await expect(page.getByRole('dialog')).toHaveCount(0);
   const sound = page.getByRole('button', { name: /^Sound (on|off)$/ });

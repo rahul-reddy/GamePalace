@@ -1,3 +1,4 @@
+import { useDialogFocus } from '@syndicate/ui';
 import QRCode from 'qrcode';
 import { useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -20,16 +21,7 @@ export function DeviceDialog({ roomCode, onClose }: { roomCode: string; onClose:
       .then(setQr)
       .catch(() => setQr(null));
   }, [link]);
-  useEffect(() => {
-    const previous = document.activeElement as HTMLElement | null;
-    closeRef.current?.focus();
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('keydown', onKey);
-      previous?.focus?.();
-    };
-  }, [onClose]);
+  useDialogFocus(true, onClose, closeRef);
   return createPortal(
     <div className="modal-backdrop" onClick={onClose}>
       <div
