@@ -1,0 +1,5 @@
+# Copy to .dev.vars for local overrides. Never commit .dev.vars.
+# Extra browser origins allowed to call the API (comma separated). Same-origin is always allowed.
+ALLOWED_ORIGINS=
+# 1 enables test-only behaviour (deterministic seeds via header). Never enable in production.
+TEST_MODE=0
