@@ -65,7 +65,7 @@ for (const n of [8, 12]) {
     const code = ((await host.page.getByTestId('room-code').textContent()) ?? '').trim();
     await host.page
       .getByRole('group', { name: 'Pace' })
-      .getByRole('button', { name: 'Relaxed' })
+      .getByRole('button', { name: 'Relaxed', exact: true })
       .click();
 
     await everyone(guests, async (s, i) => {

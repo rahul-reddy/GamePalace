@@ -9,6 +9,7 @@ import {
   listRulesVersions,
   nextPhase,
   phaseDuration,
+  redactViewForPlayer,
   scenarioById,
   splitPool,
   successChance,
@@ -290,6 +291,34 @@ describe('phase machine', () => {
     expect(phaseDuration(fast, 'COMMITMENT')).toBe(19_000);
   });
 
+  it('offers ultra-relaxed, twice relaxed, from rules 2.1.0 and rejects it in older rooms', () => {
+    const relaxed = started(4, 's', { pace: 'relaxed' }, '2.1.0');
+    const ultra = started(4, 's', { pace: 'ultra' }, '2.1.0');
+    expect(phaseDuration(relaxed, 'NEGOTIATION')).toBe(113_000);
+    expect(phaseDuration(ultra, 'NEGOTIATION')).toBe(225_000);
+    expect(phaseDuration(ultra, 'COMMITMENT')).toBe(75_000);
+    expect(redactViewForPlayer(ultra, 'p1').rules.paces).toEqual([
+      'fast',
+      'normal',
+      'relaxed',
+      'ultra',
+    ]);
+    for (const version of ['1.0.0', '2.0.0']) {
+      const old = lobby(2, {}, version);
+      expect(err(old, cmd('p1', { type: 'updateSettings', settings: { pace: 'ultra' } }))).toBe(
+        'INVALID_COMMAND',
+      );
+      expect(redactViewForPlayer(old, 'p1').rules.paces).not.toContain('ultra');
+      expect(() => lobby(2, { pace: 'ultra' }, version)).toThrow();
+    }
+    expect(
+      err(
+        lobby(2, {}, '2.1.0'),
+        cmd('p1', { type: 'updateSettings', settings: { pace: 'glacial' as never } }),
+      ),
+    ).toBe('INVALID_COMMAND');
+  });
+
   it('cuts to the final reckoning after a round once the match cap passes', () => {
     let state = advanceTo(started(4), 'ROUND_SUMMARY');
     state = { ...state, matchCapAt: state.phaseStartedAt };
@@ -307,6 +336,18 @@ describe('phase machine', () => {
         while (state.phase !== 'RESULTS') state = expire(state);
         expect(state.log.some((e) => e.kind === 'match_capped')).toBe(false);
         expect(state.phaseStartedAt - start).toBeLessThan(rules.timing.matchCapMs);
+      }
+    }
+  });
+
+  it('keeps a full standard match within the duration cap at every pace (rules 2.1.0)', () => {
+    for (const pace of ['fast', 'normal', 'relaxed', 'ultra'] as const) {
+      for (const beginner of [false, true]) {
+        let state = started(12, 'cap', { pace, beginner }, '2.1.0');
+        const start = state.matchStartedAt as number;
+        while (state.phase !== 'RESULTS') state = expire(state);
+        expect(state.log.some((e) => e.kind === 'match_capped')).toBe(false);
+        expect(state.phaseStartedAt - start).toBeLessThan(getRules('2.1.0').timing.matchCapMs);
       }
     }
   });

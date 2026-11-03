@@ -4,6 +4,14 @@ All dates 2026-10-23. Pull request numbers refer to rahul-reddy/GamePalace.
 
 ## Unreleased (not deployed)
 
+### Ultra-relaxed pace, rules 2.1.0
+- New pace "Ultra-relaxed": every phase lasts twice as long as Relaxed (3x normal), for new
+  players, younger players or a table that talks a lot. Phases still end early once everyone
+  is done.
+- Rules 2.1.0 = 2.0.0 plus that pace and a 90-minute match cap (a standard ultra-relaxed match
+  with beginner help runs about 49 minutes). Rooms already on 2.0.0 or 1.0.0 keep their rules
+  and reject the new pace with a clear error.
+
 ### Practice bots
 - "Practice with bots" on the homepage: play a whole match alone against 3 bots. In any lobby
   the host can "Add a bot" or "Fill with bots"; bots are marked BOT and can be removed.

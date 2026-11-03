@@ -6,8 +6,8 @@
    `<site>/how-to-play`); inside a game, **Rules** links to it too.
 3. **Share the room.** Read out the 6-character code, press "Share invite link", or let people
    scan the QR code. Everyone plays on their own phone or computer, from any network.
-4. **Wait for 4-12 players.** Everyone presses "I'm ready". You can change match length, pace and
-   chat style, and remove anyone who joined by mistake. Then press "Start match".
+4. **Wait for 4-12 players.** Everyone presses "I'm ready". You can change match length, pace (pick
+   **Ultra-relaxed** for new or young players: twice as long as Relaxed) and chat style, and remove anyone who joined by mistake. Then press "Start match".
    **Short of people?** Press "Add a bot" or "Fill with bots" in the lobby, or start from
    "Practice with bots" on the homepage for a solo game against 3 bots. Bots play by the same
    rules, see only their own secrets, and act at once in each phase. A phase never ends early on

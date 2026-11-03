@@ -128,7 +128,7 @@ export interface CreateGameConfig {
 /** Creates a room in the LOBBY phase with the host seated. The seed is used for the first match. */
 export function createGame(config: CreateGameConfig, seed: string): GameState {
   const rulesVersion = config.rulesVersion ?? CURRENT_RULES_VERSION;
-  getRules(rulesVersion);
+  const rules = getRules(rulesVersion);
   const name =
     cleanName(config.hostName) ?? fail('INVALID_COMMAND', 'Choose a different nickname.');
   const state: GameState = {
@@ -136,7 +136,7 @@ export function createGame(config: CreateGameConfig, seed: string): GameState {
     rulesVersion,
     seed,
     matchIndex: 0,
-    settings: { ...DEFAULT_SETTINGS, ...config.settings },
+    settings: { ...DEFAULT_SETTINGS, ...validSettings(config.settings ?? {}, rules) },
     hostId: config.hostId,
     phase: 'LOBBY',
     phaseVersion: 0,
@@ -219,7 +219,11 @@ const ROUND_PHASES: TimedPhase[] = [
 
 export function phaseDuration(state: GameState, phase: TimedPhase): number {
   const rules = rulesOf(state);
-  let ms = rules.timing.phaseMs[phase] * rules.timing.paceMultipliers[state.settings.pace];
+  const pace = rules.timing.paceMultipliers[state.settings.pace];
+  // Settings are validated against the room's rules, so this only trips on corrupt state.
+  if (pace === undefined)
+    throw new Error(`Pace ${state.settings.pace} is not in rules ${rules.version}`);
+  let ms = rules.timing.phaseMs[phase] * pace;
   // Beginners get extra time to read during the first round.
   if (state.settings.beginner && (state.round <= 1 || phase === 'ROLE_REVEAL')) ms *= 1.4;
   return Math.round(ms / 1000) * 1000;
@@ -627,7 +631,7 @@ function removePlayer(state: GameState, id: string, now: number, kind: LogKind):
   }
 }
 
-function validSettings(input: Partial<MatchSettings>): Partial<MatchSettings> {
+function validSettings(input: Partial<MatchSettings>, rules: RulesConfig): Partial<MatchSettings> {
   const out: Partial<MatchSettings> = {};
   if (input.length !== undefined) {
     if (input.length !== 'standard' && input.length !== 'quick')
@@ -635,7 +639,8 @@ function validSettings(input: Partial<MatchSettings>): Partial<MatchSettings> {
     out.length = input.length;
   }
   if (input.pace !== undefined) {
-    if (!['fast', 'normal', 'relaxed'].includes(input.pace)) fail('INVALID_COMMAND', 'Bad pace.');
+    if (rules.timing.paceMultipliers[input.pace] === undefined)
+      fail('INVALID_COMMAND', 'This room does not offer that pace.');
     out.pace = input.pace;
   }
   if (input.beginner !== undefined) out.beginner = Boolean(input.beginner);
@@ -696,7 +701,7 @@ function applyPlayerCommand(state: GameState, env: CommandEnvelope): void {
     case 'updateSettings': {
       requireHost(state, actor);
       requirePhase(state, 'LOBBY', 'RESULTS');
-      state.settings = { ...state.settings, ...validSettings(command.settings) };
+      state.settings = { ...state.settings, ...validSettings(command.settings, rulesOf(state)) };
       // Settings changes invalidate earlier readiness so nobody starts under rules they did not see.
       for (const p of state.players) if (p.id !== actor && !p.bot) p.ready = false;
       return;

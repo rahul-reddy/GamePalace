@@ -58,4 +58,15 @@ test('the host can add and remove bots by hand in a normal lobby @practice', asy
   await page.getByRole('button', { name: 'Fill with 2 bots' }).click();
   await expect(page.getByText('BOT', { exact: true })).toHaveCount(3);
   await expect(page.getByRole('button', { name: 'Start match' })).toBeEnabled();
+  // Ultra-relaxed pace (rules 2.1.0) is offered and sticks.
+  const pace = page.getByRole('group', { name: 'Pace' });
+  await pace.getByRole('button', { name: 'Ultra-relaxed' }).click();
+  await expect(pace.getByRole('button', { name: 'Ultra-relaxed' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await expect(pace.getByRole('button', { name: 'Relaxed', exact: true })).toHaveAttribute(
+    'aria-pressed',
+    'false',
+  );
 });

@@ -19,6 +19,7 @@ import type {
   IntelReport,
   LogEntry,
   MatchSettings,
+  Pace,
   Operation,
   Phase,
   ScoreBreakdown,
@@ -125,6 +126,8 @@ export interface ResultsView {
 
 export interface RulesSummary {
   version: string;
+  /** Paces this room's rules offer, slowest last. */
+  paces: Pace[];
   minPlayers: number;
   maxPlayers: number;
   maxCommit: number;
@@ -303,6 +306,9 @@ export function redactViewForPlayer(state: GameState, playerId: string): PlayerV
   return {
     rules: {
       version: rules.version,
+      paces: (Object.keys(rules.timing.paceMultipliers) as Pace[]).sort(
+        (a, b) => (rules.timing.paceMultipliers[a] ?? 0) - (rules.timing.paceMultipliers[b] ?? 0),
+      ),
       minPlayers: rules.players.min,
       maxPlayers: rules.players.max,
       maxCommit: rules.economy.maxCommit,

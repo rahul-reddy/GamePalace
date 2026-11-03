@@ -1,4 +1,4 @@
-import type { MatchSettings } from '@syndicate/game-engine';
+import type { MatchSettings, Pace } from '@syndicate/game-engine';
 import { Card, ConfirmDialog } from '@syndicate/ui';
 import QRCode from 'qrcode';
 import { useEffect, useRef, useState } from 'react';
@@ -10,6 +10,13 @@ import type { GameProps } from './Room';
 function inviteUrl(code: string): string {
   return `${location.origin}/join/${code}`;
 }
+
+const PACE_LABELS: Record<Pace, string> = {
+  fast: 'Fast',
+  normal: 'Normal',
+  relaxed: 'Relaxed',
+  ultra: 'Ultra-relaxed',
+};
 
 export function Lobby(props: GameProps) {
   const { view, act, roomCode } = props;
@@ -189,13 +196,12 @@ export function Lobby(props: GameProps) {
           />
           <Setting
             label="Pace"
-            value={view.settings.pace[0]?.toUpperCase() + view.settings.pace.slice(1)}
+            value={PACE_LABELS[view.settings.pace]}
             editable={isHost}
-            options={[
-              ['Fast', () => setSetting({ pace: 'fast' })],
-              ['Normal', () => setSetting({ pace: 'normal' })],
-              ['Relaxed', () => setSetting({ pace: 'relaxed' })],
-            ]}
+            options={view.rules.paces.map((pace) => [
+              PACE_LABELS[pace],
+              () => setSetting({ pace }),
+            ])}
           />
           <Setting
             label="Beginner help"
