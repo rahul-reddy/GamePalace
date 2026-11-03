@@ -41,6 +41,29 @@ import {
   useAbility,
 } from './roles';
 
+/** Practice bots: names and play styles (strategies from packages/test-bots), in seating order. */
+export const BOT_NAMES = [
+  'Vesper',
+  'Marlowe',
+  'Quill',
+  'Sable',
+  'Juno',
+  'Rook',
+  'Cass',
+  'Wren',
+  'Ines',
+  'Otto',
+  'Lark',
+];
+export const BOT_STYLES = [
+  'opportunist',
+  'cooperative',
+  'detective',
+  'saboteur',
+  'aggressive',
+  'conservative',
+];
+
 export const DEFAULT_SETTINGS: MatchSettings = {
   length: 'standard',
   pace: 'normal',
@@ -150,7 +173,14 @@ function uniqueName(state: GameState, name: string): string {
   }
 }
 
-function seatPlayer(state: GameState, id: string, name: string, avatar: Avatar, now: number): void {
+function seatPlayer(
+  state: GameState,
+  id: string,
+  name: string,
+  avatar: Avatar,
+  now: number,
+  bot: string | null = null,
+): void {
   const rules = rulesOf(state);
   if (state.players.length >= rules.players.max) fail('ROOM_FULL', 'This room is full.');
   if (findPlayer(state, id)) fail('INVALID_COMMAND', 'Already seated.');
@@ -172,6 +202,7 @@ function seatPlayer(state: GameState, id: string, name: string, avatar: Avatar, 
     charges: 0,
     accusationsMade: 0,
     accusedInRound: 0,
+    bot,
   });
   addLog(state, now, 'player_joined', { player: id });
 }
@@ -267,11 +298,16 @@ function phaseDoneFor(state: GameState, p: PlayerState): boolean {
   return p.ready;
 }
 
-/** Advances early when every connected player has finished the current phase. */
+/**
+ * Advances early when every connected player has finished the current phase. At
+ * least one connected person must be among them: practice bots are always ready,
+ * so without this a table of bots would race through phases while its people are
+ * away (refreshing, asleep); then only deadlines move the game.
+ */
 function maybeAdvanceEarly(state: GameState, now: number): void {
   if (!isInMatch(state.phase)) return;
   const gating = gatingPlayers(state);
-  if (gating.length === 0) return;
+  if (!gating.some((p) => !p.bot)) return;
   if (gating.every((p) => phaseDoneFor(state, p))) transitionPhase(state, now);
 }
 
@@ -571,7 +607,8 @@ function requirePhase(state: GameState, ...phases: Phase[]): void {
 function transferHostIfNeeded(state: GameState, now: number): void {
   const host = findPlayer(state, state.hostId);
   if (host && host.connected) return;
-  const next = state.players.find((p) => p.connected && p.id !== state.hostId);
+  // Hosting passes to a connected person, never to a practice bot.
+  const next = state.players.find((p) => p.connected && !p.bot && p.id !== state.hostId);
   if (next) {
     state.hostId = next.id;
     addLog(state, now, 'host_changed', { player: next.id });
@@ -583,8 +620,9 @@ function removePlayer(state: GameState, id: string, now: number, kind: LogKind):
   state.players.forEach((p, seat) => (p.seat = seat));
   state.deals = state.deals.filter((d) => !d.members.includes(id));
   addLog(state, now, kind, { player: id });
-  if (state.hostId === id && state.players[0]) {
-    state.hostId = state.players[0].id;
+  const nextHost = state.players.find((p) => !p.bot);
+  if (state.hostId === id && nextHost) {
+    state.hostId = nextHost.id;
     addLog(state, now, 'host_changed', { player: state.hostId });
   }
 }
@@ -660,7 +698,7 @@ function applyPlayerCommand(state: GameState, env: CommandEnvelope): void {
       requirePhase(state, 'LOBBY', 'RESULTS');
       state.settings = { ...state.settings, ...validSettings(command.settings) };
       // Settings changes invalidate earlier readiness so nobody starts under rules they did not see.
-      for (const p of state.players) if (p.id !== actor) p.ready = false;
+      for (const p of state.players) if (p.id !== actor && !p.bot) p.ready = false;
       return;
     }
     case 'start': {
@@ -840,6 +878,25 @@ function applyPlayerCommand(state: GameState, env: CommandEnvelope): void {
       );
       return;
     }
+    case 'addBot': {
+      requireHost(state, actor);
+      requirePhase(state, 'LOBBY', 'RESULTS');
+      if (!env.newPlayerId) fail('INVALID_COMMAND', 'Missing server-generated id.');
+      const count = state.players.filter((p) => p.bot).length;
+      const name = `${BOT_NAMES[count % BOT_NAMES.length]} (bot)`;
+      const avatar = AVATARS[(state.players.length + 5) % AVATARS.length] as Avatar;
+      seatPlayer(
+        state,
+        env.newPlayerId,
+        name,
+        avatar,
+        now,
+        BOT_STYLES[count % BOT_STYLES.length] as string,
+      );
+      const seated = findPlayer(state, env.newPlayerId);
+      if (seated) seated.ready = true;
+      return;
+    }
     case 'rematch': {
       requireHost(state, actor);
       requirePhase(state, 'RESULTS');
@@ -871,7 +928,8 @@ function resetToLobby(state: GameState, now: number): void {
   state.accusations = [];
   // A rematch keeps the rules version the room was created with.
   for (const p of state.players) {
-    p.ready = false;
+    // Practice bots stay ready for the next match.
+    p.ready = p.bot !== null;
     p.credits = rules.economy.startingCredits;
     p.influence = 0;
     p.suspicion = 0;

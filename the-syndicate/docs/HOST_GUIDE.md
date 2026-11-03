@@ -8,6 +8,10 @@
    scan the QR code. Everyone plays on their own phone or computer, from any network.
 4. **Wait for 4-12 players.** Everyone presses "I'm ready". You can change match length, pace and
    chat style, and remove anyone who joined by mistake. Then press "Start match".
+   **Short of people?** Press "Add a bot" or "Fill with bots" in the lobby, or start from
+   "Practice with bots" on the homepage for a solo game against 3 bots. Bots play by the same
+   rules, see only their own secrets, and act at once in each phase. A phase never ends early on
+   bots alone: a person must be connected and done, otherwise the timer decides.
 5. **Each operation has three steps.** Study the operation and your private intel; negotiate
    (chat and deals are not enforced); seal 0-3 credits. Then everyone sees the outcome and who
    kept their promises. Phases end on a timer, or earlier when everyone is done.

@@ -107,6 +107,8 @@ export interface PlayerState {
   accusationsMade: number;
   /** Last round in which accusations raised this player's suspicion. */
   accusedInRound: number;
+  /** Practice bot: its play style (a test-bots strategy name). Null for people. */
+  bot: string | null;
 }
 
 /** A use of a role ability. Secret until the final reckoning (except what it publicly causes). */
@@ -340,7 +342,8 @@ export type PlayerCommand =
   | { type: 'chat'; kind: 'text' | 'preset' | 'reaction'; text: string }
   | { type: 'useAbility'; target?: string; choice?: string; targetRound?: number }
   | { type: 'accuse'; target: string }
-  | { type: 'rematch' };
+  | { type: 'rematch' }
+  | { type: 'addBot' };
 
 /** Commands only the server itself may issue. */
 export type SystemCommand =
@@ -356,6 +359,8 @@ export interface CommandEnvelope {
   command: PlayerCommand | SystemCommand;
   /** Fresh secret seed supplied by the server for 'start' and 'rematch'. */
   seed?: string;
+  /** Server-generated id for the seat created by 'addBot'. */
+  newPlayerId?: string;
 }
 
 export type ErrorCode =

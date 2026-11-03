@@ -4,6 +4,14 @@ All dates 2026-10-23. Pull request numbers refer to rahul-reddy/GamePalace.
 
 ## Unreleased (not deployed)
 
+### Practice bots
+- "Practice with bots" on the homepage: play a whole match alone against 3 bots. In any lobby
+  the host can "Add a bot" or "Fill with bots"; bots are marked BOT and can be removed.
+- Bots are server-side seats driven by the simulator's strategies (a mix of six play styles).
+  They decide from their own redacted view only, their commands go through the same validation,
+  persistence and event log as a person's, and their notes survive restarts.
+- A phase ends early only when at least one connected person is done; bots never host.
+
 ### Recovery, operations and release readiness (#17)
 - Crash-recovery test: the runtime is killed mid-match; persisted alarms advance the phase with
   nobody connected and every seat resumes.

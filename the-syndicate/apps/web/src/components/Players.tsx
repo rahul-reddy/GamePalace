@@ -57,6 +57,14 @@ export function PlayerStrip({
             <span className="min-w-0 flex-1">
               <span className="block truncate text-sm font-semibold">
                 {p.name}
+                {p.bot && (
+                  <span
+                    className="ml-1 align-middle text-[0.65rem] font-bold tracking-wider px-1.5 py-0.5 rounded border border-[var(--color-border-strong)] text-[var(--color-muted)]"
+                    title="Practice bot"
+                  >
+                    BOT
+                  </span>
+                )}
                 {p.id === view.self.id && (
                   <span className="text-[var(--color-faint)] font-normal"> (you)</span>
                 )}

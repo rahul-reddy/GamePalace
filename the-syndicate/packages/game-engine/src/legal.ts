@@ -16,7 +16,8 @@ export type LegalAction =
   | { type: 'chat'; text: boolean }
   | { type: 'useAbility'; ability: AbilityKind; charges: number }
   | { type: 'accuse'; left: number }
-  | { type: 'rematch' };
+  | { type: 'rematch' }
+  | { type: 'addBot' };
 
 /**
  * The actions a player may take right now. A command not described here is
@@ -32,6 +33,7 @@ export function legalActions(state: GameState, playerId: string): LegalAction[] 
   if (phase !== 'COMMITMENT' && phase !== 'RESULTS') out.push({ type: 'setReady' });
   if (host && (phase === 'LOBBY' || phase === 'RESULTS')) {
     out.push({ type: 'updateSettings' });
+    if (state.players.length < rules.players.max) out.push({ type: 'addBot' });
     if (state.players.length > 1) out.push({ type: 'kick' });
   }
   if (

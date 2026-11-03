@@ -3,11 +3,12 @@ import { useState, type FormEvent } from 'react';
 import { ApiError, createRoom, joinRoom } from '../lib/api';
 import { AVATAR_GLYPH } from '../lib/format';
 import { navigate } from '../lib/router';
-import { loadProfile, loadSeat, saveProfile, saveSeat } from '../lib/session';
+import { loadProfile, loadSeat, markPractice, saveProfile, saveSeat } from '../lib/session';
 
 const CODE_CHARS = /[^ABCDEFGHJKMNPQRSTUVWXYZ23456789]/g;
 
 export function Entry({ mode, initialCode }: { mode: 'host' | 'join'; initialCode: string }) {
+  const practice = mode === 'host' && new URLSearchParams(location.search).has('practice');
   const profile = loadProfile();
   const [name, setName] = useState(profile?.name ?? '');
   const [avatar, setAvatar] = useState<Avatar>(
@@ -36,6 +37,7 @@ export function Entry({ mode, initialCode }: { mode: 'host' | 'join'; initialCod
           : await joinRoom(code, trimmed, avatar);
       saveProfile({ name: trimmed, avatar });
       saveSeat({ ...seat, name: trimmed });
+      if (practice) markPractice(seat.roomCode);
       navigate(`/room/${seat.roomCode}`);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Something went wrong. Please try again.');
@@ -54,12 +56,14 @@ export function Entry({ mode, initialCode }: { mode: 'host' | 'join'; initialCod
           ← Back
         </button>
         <h1 className="font-display text-3xl mb-1">
-          {mode === 'host' ? 'Host a game' : 'Join a game'}
+          {practice ? 'Practice with bots' : mode === 'host' ? 'Host a game' : 'Join a game'}
         </h1>
         <p className="text-[var(--color-muted)] mb-6">
-          {mode === 'host'
-            ? 'You will get a room code to share. You need at least 4 players.'
-            : 'Enter the code your host shared.'}
+          {practice
+            ? 'You play against 3 bots. They follow the same rules and see only their own secrets. You can add friends too.'
+            : mode === 'host'
+              ? 'You will get a room code to share. You need at least 4 players.'
+              : 'Enter the code your host shared.'}
         </p>
         {existing && (
           <div className="card-private p-4 mb-5">
@@ -178,7 +182,13 @@ export function Entry({ mode, initialCode }: { mode: 'host' | 'join'; initialCod
             </p>
           )}
           <button type="submit" className="btn btn-primary btn-block" disabled={busy}>
-            {busy ? 'Connecting…' : mode === 'host' ? 'Create room' : 'Join room'}
+            {busy
+              ? 'Connecting…'
+              : practice
+                ? 'Start practice'
+                : mode === 'host'
+                  ? 'Create room'
+                  : 'Join room'}
           </button>
         </form>
       </div>
