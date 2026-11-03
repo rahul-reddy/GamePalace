@@ -25,7 +25,7 @@ const Avatar = z.enum(AVATARS);
 export const MatchSettingsInput = z
   .object({
     length: z.enum(['standard', 'quick']),
-    pace: z.enum(['fast', 'normal', 'relaxed']),
+    pace: z.enum(['fast', 'normal', 'relaxed', 'ultra']),
     beginner: z.boolean(),
     presetChatOnly: z.boolean(),
   })

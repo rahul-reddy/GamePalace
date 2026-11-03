@@ -4,6 +4,7 @@
 // edit a released version in place.
 import rules100 from '../../../config/rules-1.0.0.json' with { type: 'json' };
 import rules200 from '../../../config/rules-2.0.0.json' with { type: 'json' };
+import rules210 from '../../../config/rules-2.1.0.json' with { type: 'json' };
 import type { AbilityKind, Archetype, ObjectiveId, Pace, Tier, TimedPhase } from './types';
 
 export interface TierRules {
@@ -67,7 +68,8 @@ export interface RulesConfig {
   rounds: { standard: number; quick: number };
   timing: {
     phaseMs: Record<TimedPhase, number>;
-    paceMultipliers: Record<Pace, number>;
+    /** Older rule sets lack some paces (ultra arrived in 2.1.0); those rooms reject them. */
+    paceMultipliers: Partial<Record<Pace, number>>;
     matchCapMs: number;
   };
   operations: {
@@ -94,9 +96,10 @@ export interface RulesConfig {
 const registry: Record<string, RulesConfig> = {
   '1.0.0': rules100 as RulesConfig,
   '2.0.0': rules200 as RulesConfig,
+  '2.1.0': rules210 as RulesConfig,
 };
 
-export const CURRENT_RULES_VERSION = '2.0.0';
+export const CURRENT_RULES_VERSION = '2.1.0';
 
 export function getRules(version: string): RulesConfig {
   const rules = registry[version];

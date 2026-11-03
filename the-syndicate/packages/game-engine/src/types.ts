@@ -19,7 +19,8 @@ export type TimedPhase = Exclude<Phase, 'LOBBY' | 'RESULTS'>;
 export const TIERS = ['LOW', 'MEDIUM', 'HIGH'] as const;
 export type Tier = (typeof TIERS)[number];
 
-export type Pace = 'fast' | 'normal' | 'relaxed';
+/** 'ultra' is ultra-relaxed: twice relaxed (rules 2.1.0 and later). */
+export type Pace = 'fast' | 'normal' | 'relaxed' | 'ultra';
 export type MatchLength = 'standard' | 'quick';
 
 export interface MatchSettings {

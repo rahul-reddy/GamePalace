@@ -1,9 +1,10 @@
 # THE SYNDICATE: rules specification
 
-Current rules version: **2.0.0** (`config/rules-2.0.0.json`). New rooms use it. Rules **1.0.0**
-(`config/rules-1.0.0.json`, the symmetric baseline of the first playable slice) stays supported:
-a room keeps the rules version it was created with until it closes, and section 10 lists how 1.0.0
-differs.
+Current rules version: **2.1.0** (`config/rules-2.1.0.json`). New rooms use it. It is 2.0.0
+plus the ultra-relaxed pace and a 90-minute match cap; gameplay and balance are unchanged. Rules
+**2.0.0** and **1.0.0** (`config/rules-1.0.0.json`, the symmetric baseline of the first playable
+slice) stay supported: a room keeps the rules version it was created with until it closes, and
+section 10 lists how 1.0.0 differs. Rooms on 1.0.0 or 2.0.0 do not offer ultra-relaxed.
 
 All numbers below come from the config file. If they ever disagree, the config file is
 authoritative and this document is out of date.
@@ -45,7 +46,8 @@ Only the server changes phase.
 | ROUND_SUMMARY | 15 s | Exposure checks, suspicion decay, standings, broken promises. |
 | FINAL_RECKONING | 40 s | Roles, objectives, bonuses, penalties, scores and the full audit. |
 
-- **Pace** multiplies every length: fast x0.75, normal x1, relaxed x1.5 (whole seconds).
+- **Pace** multiplies every length: fast x0.75, normal x1, relaxed x1.5, ultra-relaxed x3
+  (twice relaxed; rules 2.1.0), rounded to whole seconds.
   **Beginner mode** adds 40% to the role reveal and the whole first round.
 - **Early advance:** a phase ends as soon as every *connected* player is done (pressed *Ready*,
   or sealed a commitment in `COMMITMENT`). With nobody connected only the deadline advances it.
@@ -53,7 +55,7 @@ Only the server changes phase.
   when the server processed the deadline, so a late server never skips phases.
 - **Safe defaults:** a player who has not sealed when `COMMITMENT` ends commits **0** (logged as an
   auto-pass) and uses no ability. Not pressing Ready never blocks anyone.
-- **Match cap:** 45 minutes after the start, the match goes to the final reckoning at the end of
+- **Match cap:** 90 minutes (45 before 2.1.0) after the start, the match goes to the final reckoning at the end of
   the current round. Every supported pace finishes well inside it (tested).
 
 ## 3. Operations
