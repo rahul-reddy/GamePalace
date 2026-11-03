@@ -32,6 +32,11 @@
 11. **The "use on another device" link is a credential.** It is clearly labelled private and travels
     in the URL fragment (never sent to servers), but a user could still screenshot or share it.
 12. **Fonts are system fonts** (no web fonts are downloaded); headings use the platform's serif.
+16. **Practice bots are simple.** They use the balance simulator's strategies: fixed rules for
+    deals, abilities, accusations and commitments, emoji and preset chat only, and no reading of
+    free-text messages. They act at the start of each phase (and answer deals as they arrive),
+    so they never react to what people say. They are for learning the flow, not a substitute for
+    people. Each bot adds one stored row per phase.
 
 ## Operations
 

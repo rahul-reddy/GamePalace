@@ -269,6 +269,9 @@ importers:
       '@syndicate/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@syndicate/test-bots':
+        specifier: workspace:*
+        version: link:../../packages/test-bots
     devDependencies:
       '@cloudflare/workers-types':
         specifier: 5.20261019.1

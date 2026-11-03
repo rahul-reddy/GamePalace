@@ -6,6 +6,8 @@ export {
   applyCommand,
   createGame,
   currentOperation,
+  BOT_NAMES,
+  BOT_STYLES,
   DEFAULT_SETTINGS,
   findPlayer,
   generateOperations,

@@ -74,6 +74,7 @@ export const PlayerCommandInput = z.discriminatedUnion('type', [
     })
     .strict(),
   z.object({ type: z.literal('accuse'), target: Id }).strict(),
+  z.object({ type: z.literal('addBot') }).strict(),
 ]);
 export type PlayerCommandInput = z.infer<typeof PlayerCommandInput>;
 

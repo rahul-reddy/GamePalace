@@ -1,7 +1,8 @@
 import type { MatchSettings } from '@syndicate/game-engine';
 import { Card, ConfirmDialog } from '@syndicate/ui';
 import QRCode from 'qrcode';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { takePractice } from '../lib/session';
 import { Chat } from '../components/Chat';
 import { Avatar, PlayerStrip, ReadyBar } from '../components/Players';
 import type { GameProps } from './Room';
@@ -28,6 +29,26 @@ export function Lobby(props: GameProps) {
   const enough = view.players.length >= view.rules.minPlayers;
   const othersReady = view.players.every((p) => p.ready || p.id === view.self.id);
   const canStart = isHost && enough && othersReady;
+  const missing = Math.max(0, view.rules.minPlayers - view.players.length);
+  const full = view.players.length >= view.rules.maxPlayers;
+  const [adding, setAdding] = useState(false);
+
+  async function addBots(count: number) {
+    setAdding(true);
+    for (let i = 0; i < count; i++) {
+      if (!(await act({ type: 'addBot' }))) break;
+    }
+    setAdding(false);
+  }
+
+  // "Practice with bots" from the homepage: fill the table once, as soon as the lobby opens.
+  const practiced = useRef(false);
+  useEffect(() => {
+    if (practiced.current || !isHost) return;
+    practiced.current = true;
+    if (takePractice(roomCode) && missing > 0) queueMicrotask(() => void addBots(missing));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isHost, roomCode]);
 
   async function copy() {
     const url = inviteUrl(roomCode);
@@ -96,6 +117,34 @@ export function Lobby(props: GameProps) {
           )}
         </div>
         <PlayerStrip view={view} mode="ready" />
+        {isHost && (
+          <div className="mt-3 flex flex-col gap-2">
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                disabled={full || adding}
+                onClick={() => addBots(1)}
+              >
+                Add a bot
+              </button>
+              {missing > 0 && (
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  disabled={adding}
+                  onClick={() => addBots(missing)}
+                >
+                  Fill with {missing} bot{missing === 1 ? '' : 's'}
+                </button>
+              )}
+            </div>
+            <p className="text-xs text-[var(--color-muted)]">
+              Bots play by the same rules and see only their own secrets. Handy for practice or a
+              short table. Remove them like any player.
+            </p>
+          </div>
+        )}
         {isHost && view.players.length > 1 && (
           <details className="mt-3">
             <summary className="text-sm text-[var(--color-muted)] cursor-pointer min-h-[40px] flex items-center">

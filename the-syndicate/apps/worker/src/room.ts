@@ -16,6 +16,7 @@ import {
   findPlayer,
   getRules,
   redactViewForPlayer,
+  rngFor,
   serialize,
   type Avatar,
   type CommandEnvelope,
@@ -32,12 +33,21 @@ import {
   type SeatResponse,
   type ServerMessage,
 } from '@syndicate/shared';
+import { botCommands, type StrategyName } from '@syndicate/test-bots';
 import { newPlayerId, newSeed, newToken, sha256 } from './crypto';
 import type { Env } from './env';
 
 interface Attachment {
   playerId: string | null;
   connectedAt: number;
+}
+
+/** What a practice bot remembers between phases (its strategy's notes). */
+interface BotMemory {
+  match: number;
+  /** `${matchIndex}:${phaseVersion}` of the last phase the bot has played. */
+  phase: string;
+  data: Record<string, unknown>;
 }
 
 interface Meta {
@@ -85,6 +95,7 @@ export class Room extends DurableObject<Env> {
   private meta: Meta | null = null;
   private buckets = new Map<WebSocket, { tokens: number; at: number }>();
   private badMessages = new Map<WebSocket, number>();
+  private botMemories = new Map<string, BotMemory>();
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
@@ -117,6 +128,9 @@ export class Room extends DurableObject<Env> {
       seq INTEGER PRIMARY KEY,
       at INTEGER NOT NULL,
       envelope TEXT NOT NULL)`);
+    sql.exec(`CREATE TABLE IF NOT EXISTS bot_memory (
+      player_id TEXT PRIMARY KEY,
+      memory TEXT NOT NULL)`);
   }
 
   // ---- Loading and persistence ------------------------------------------------
@@ -182,6 +196,111 @@ export class Room extends DurableObject<Env> {
     this.game = next;
     this.meta = { ...meta, seq, lastActivity: now };
     return seq;
+  }
+
+  // ---- Practice bots ------------------------------------------------------------
+
+  private botMemory(id: string): BotMemory {
+    let memory = this.botMemories.get(id);
+    if (!memory) {
+      const row = this.ctx.storage.sql
+        .exec<{ memory: string }>('SELECT memory FROM bot_memory WHERE player_id = ?', id)
+        .toArray()[0];
+      memory = row ? (JSON.parse(row.memory) as BotMemory) : { match: -1, phase: '', data: {} };
+      this.botMemories.set(id, memory);
+    }
+    return memory;
+  }
+
+  private saveBotMemory(id: string, memory: BotMemory): void {
+    this.ctx.storage.sql.exec(
+      'INSERT OR REPLACE INTO bot_memory (player_id, memory) VALUES (?, ?)',
+      id,
+      JSON.stringify(memory),
+    );
+  }
+
+  /** Applies one command for a bot exactly as for a person: validated, persisted, logged. */
+  private applyBot(id: string, command: PlayerCommand, now: number): boolean {
+    const env: CommandEnvelope = { actor: id, now, command };
+    const result = applyCommand(this.game as GameState, env);
+    if (!result.ok) return false;
+    this.commit(result.state, env);
+    return true;
+  }
+
+  /**
+   * Lets every practice bot take its turn in the current phase, once per phase. Bots
+   * decide from their own redacted view (the same information a person gets) using
+   * the simulator's strategies, then press Ready, or seal 0 if their strategy did not
+   * seal. When the last person is already done, a bot's Ready advances the phase and
+   * the bots play the next one. Returns whether anything changed.
+   */
+  private driveBots(): boolean {
+    let changed = false;
+    for (let pass = 0; pass < 60; pass++) {
+      const game = this.game as GameState;
+      if (game.phase === 'RESULTS') break;
+      const key = `${game.matchIndex}:${game.phaseVersion}`;
+      const bot = game.players.find((p) => p.bot && this.botMemory(p.id).phase !== key);
+      if (!bot) break;
+      const memory = this.botMemory(bot.id);
+      if (memory.match !== game.matchIndex) memory.data = {};
+      memory.match = game.matchIndex;
+      memory.phase = key;
+      const now = Date.now();
+      if (game.phase !== 'LOBBY') {
+        const commands = botCommands(bot.bot as StrategyName, {
+          view: redactViewForPlayer(game, bot.id),
+          rng: rngFor(game.seed, 'bot', bot.id, game.phaseVersion),
+          memory: memory.data,
+        });
+        for (const command of commands) {
+          if ((this.game as GameState).phaseVersion !== game.phaseVersion) break;
+          this.applyBot(bot.id, command, now);
+        }
+      }
+      const current = this.game as GameState;
+      if (current.phaseVersion === game.phaseVersion) {
+        if (current.phase === 'COMMITMENT') {
+          if (current.commitments[current.round]?.[bot.id] === undefined) {
+            this.applyBot(bot.id, { type: 'commit', amount: 0 }, now);
+          }
+        } else if (!findPlayer(current, bot.id)?.ready) {
+          this.applyBot(bot.id, { type: 'setReady', ready: true }, now);
+        }
+      }
+      this.saveBotMemory(bot.id, memory);
+      changed = true;
+    }
+    return this.botsAnswerDeals() || changed;
+  }
+
+  /**
+   * Bots take their turn once per phase, so a deal proposed after that would never be
+   * answered. Each bot invited to a pending deal answers it the way its strategy answers
+   * deals in negotiation. Only the replies are applied, and the strategy runs on a copy of
+   * the bot's notes, so this cannot change anything else the bot plans to do.
+   */
+  private botsAnswerDeals(): boolean {
+    let changed = false;
+    const game = this.game as GameState;
+    if (!['INTELLIGENCE', 'NEGOTIATION', 'COMMITMENT'].includes(game.phase)) return false;
+    for (const bot of game.players.filter((p) => p.bot)) {
+      const view = redactViewForPlayer(this.game as GameState, bot.id);
+      const pending = view.deals.filter(
+        (d) => d.round === view.round && d.responses[bot.id] === 'pending',
+      );
+      if (pending.length === 0) continue;
+      const replies = botCommands(bot.bot as StrategyName, {
+        view: { ...view, phase: 'NEGOTIATION' },
+        rng: rngFor(game.seed, 'bot-reply', bot.id, game.phaseVersion, view.deals.length),
+        memory: structuredClone(this.botMemory(bot.id).data),
+      }).filter((c) => c.type === 'respondDeal');
+      const now = Date.now();
+      for (const reply of replies) changed = this.applyBot(bot.id, reply, now) || changed;
+    }
+    return changed;
   }
 
   private recordRejection(playerId: string, commandId: string, ack: ServerMessage): void {
@@ -369,6 +488,7 @@ export class Room extends DurableObject<Env> {
     const game = this.game as GameState;
     if (game.phaseEndsAt !== null) {
       this.applySystem({ type: 'tick' }, Math.max(Date.now(), game.phaseEndsAt));
+      this.driveBots();
       this.broadcast();
       await this.scheduleAlarm();
     }
@@ -529,7 +649,8 @@ export class Room extends DurableObject<Env> {
     });
     const ticked = this.applySystem({ type: 'tick' }, Date.now());
     const arrived = this.applySystem({ type: 'presence', playerId, connected: true }, Date.now());
-    if (ticked || arrived) {
+    const drove = this.driveBots();
+    if (ticked || arrived || drove) {
       this.broadcast();
     } else {
       const view = redactViewForPlayer(this.game as GameState, playerId);
@@ -583,6 +704,7 @@ export class Room extends DurableObject<Env> {
     }
     const env: CommandEnvelope = { actor: playerId, now, command };
     if (command.type === 'start') env.seed = newSeed();
+    if (command.type === 'addBot') env.newPlayerId = newPlayerId();
     const result = applyCommand(game, env);
     if (!result.ok) {
       const ack: ServerMessage = {
@@ -602,6 +724,7 @@ export class Room extends DurableObject<Env> {
     // Acknowledge before closing anything, so a player who leaves still hears "done".
     send(ws, { ...ack, seq });
     if (removed.length) this.revokeSeats(removed, command.type === 'kick');
+    this.driveBots();
     this.broadcast();
     if ((this.meta as Meta).seq % 200 === 0) this.pruneCommandLog();
     await this.scheduleAlarm();
@@ -642,6 +765,7 @@ export class Room extends DurableObject<Env> {
     if (
       this.applySystem({ type: 'presence', playerId: att.playerId, connected: false }, Date.now())
     ) {
+      this.driveBots();
       this.broadcast();
       await this.scheduleAlarm();
     }
@@ -662,7 +786,8 @@ export class Room extends DurableObject<Env> {
       await this.destroy();
       return;
     }
-    if (this.applySystem({ type: 'tick' }, now)) this.broadcast();
+    const ticked = this.applySystem({ type: 'tick' }, now);
+    if (this.driveBots() || ticked) this.broadcast();
     await this.scheduleAlarm();
   }
 
@@ -688,6 +813,7 @@ export class Room extends DurableObject<Env> {
     const directory = this.env.DIRECTORY.get(this.env.DIRECTORY.idFromName(`dir:${meta.code[0]}`));
     await directory.release(meta.code, this.ctx.id.toString());
     await this.ctx.storage.deleteAll();
+    this.botMemories.clear();
     this.game = null;
     this.meta = null;
     this.createSchema();

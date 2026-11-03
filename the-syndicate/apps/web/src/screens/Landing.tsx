@@ -30,6 +30,13 @@ export function Landing() {
           Join with a code
         </button>
         <button
+          className="btn btn-secondary btn-block"
+          type="button"
+          onClick={() => navigate('/host?practice=1')}
+        >
+          Practice with bots
+        </button>
+        <button
           className="btn btn-ghost btn-block"
           type="button"
           onClick={() => navigate('/how-to-play')}

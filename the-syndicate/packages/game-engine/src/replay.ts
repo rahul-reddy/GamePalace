@@ -21,6 +21,7 @@ export function deserialize(text: string): GameState {
     p.charges ??= 0;
     p.accusationsMade ??= 0;
     p.accusedInRound ??= 0;
+    p.bot ??= null;
   }
   if (state.results) state.results.reveals ??= [];
   return state;

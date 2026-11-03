@@ -107,6 +107,7 @@ export function HowToPlay() {
             You and your friends run a secret club that takes on risky jobs called{' '}
             <strong>operations</strong>. Put coins in, make deals, and watch for the saboteur.{' '}
             {rules.players.min} to {rules.players.max} players, each on their own phone or computer.
+            Short on people? <strong>Practice with bots</strong> fills the empty seats.
           </p>
         </header>
 

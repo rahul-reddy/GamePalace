@@ -74,6 +74,33 @@ export function saveSoundEnabled(on: boolean): void {
   write(SOUND_KEY, on ? 'on' : 'off');
 }
 
+// ---- Practice rooms -------------------------------------------------------------
+
+const PRACTICE_PREFIX = 'syndicate.practice.';
+
+/** Marks a just-created room to be filled with bots once its lobby opens. */
+export function markPractice(roomCode: string): void {
+  try {
+    sessionStorage.setItem(PRACTICE_PREFIX + roomCode.toUpperCase(), '1');
+  } catch {
+    memory.set(PRACTICE_PREFIX + roomCode.toUpperCase(), '1');
+  }
+}
+
+/** Returns true once for a room marked as practice, then clears the mark. */
+export function takePractice(roomCode: string): boolean {
+  const key = PRACTICE_PREFIX + roomCode.toUpperCase();
+  try {
+    const marked = sessionStorage.getItem(key) === '1';
+    sessionStorage.removeItem(key);
+    return marked;
+  } catch {
+    const marked = memory.get(key) === '1';
+    memory.delete(key);
+    return marked;
+  }
+}
+
 // ---- Moving a seat to another device ----------------------------------------
 
 export function encodeSeat(seat: StoredSeat): string {

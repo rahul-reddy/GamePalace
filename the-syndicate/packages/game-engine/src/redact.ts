@@ -40,6 +40,8 @@ export interface PublicPlayer {
   sealed: boolean;
   /** Public once a sabotage by this player has been exposed. */
   exposed: boolean;
+  /** A practice bot rather than a person (its play style stays private). */
+  bot: boolean;
 }
 
 export interface OperationAudit {
@@ -245,6 +247,7 @@ export function redactViewForPlayer(state: GameState, playerId: string): PlayerV
     muted: p.muted,
     sealed: inCommitWindow && roundCommits[p.id] !== undefined,
     exposed: state.abilityUses.some((u) => u.player === p.id && u.exposed),
+    bot: p.bot !== null,
   }));
   const committed = roundCommits[playerId];
   const def = roleOf(rules, me);
