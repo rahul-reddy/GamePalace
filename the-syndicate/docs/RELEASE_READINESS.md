@@ -1,7 +1,7 @@
 # Release readiness report (2026-10-23)
 
 Verdict: **staging is live and ready for a private beta with friends**; not yet a public release.
-Staging: https://the-syndicate-staging.syndicate-worker.workers.dev (commit `896146c`, deployed 2026-10-23). Human playtests and production are next. "Local" means Windows 11, Node 24, real `workerd` via `wrangler dev`; "CI" means GitHub
+Staging: https://the-syndicate-staging.syndicate-worker.workers.dev (commit `130a36d`, deployed 2026-11-03). Human playtests and production are next. "Local" means Windows 11, Node 24, real `workerd` via `wrangler dev`; "CI" means GitHub
 Actions on Ubuntu for the commit under review.
 
 | Gate | Status | Evidence |
@@ -27,7 +27,7 @@ Actions on Ubuntu for the commit under review.
 | Security review | PASS (internal) | `docs/SECURITY.md`, cross-model review on every PR; no external penetration test |
 | CI pipeline | PASS | `.github/workflows/ci.yml` runs every check above except load and the 10k simulation (600-match `sim:check` instead) |
 | Deploy tooling | PASS | `scripts/deploy.ps1` (merged commits only, typed confirmation, SHA recorded at `/api/health`), bundle self-test in CI |
-| Deployed staging | PASS | `896146c` on https://the-syndicate-staging.syndicate-worker.workers.dev; `/api/health` reports the revision; test endpoints 404; foreign origins 403; 10 browser tests pass against it over the internet (golden path, 8 and 12 players, device move, smoke, landing accessibility) |
+| Deployed staging | PASS | `130a36d` on https://the-syndicate-staging.syndicate-worker.workers.dev (first verified at `896146c`); `/api/health` reports the revision; test endpoints 404; foreign origins 403; 10 browser tests pass against it over the internet (golden path, 8 and 12 players, device move, smoke, landing accessibility) |
 | Deployed production | BLOCKED | Waiting for staging playtests and owner go-ahead |
 | Human playtests (≥3 matches) | BLOCKED | Needs participants |
 | Docs: rules, architecture, protocol, security, operations, cost, host guide | PASS | `docs/` |
